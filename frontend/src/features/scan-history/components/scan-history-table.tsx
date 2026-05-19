@@ -1,0 +1,218 @@
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { cn } from "@/lib/utils";
+import { SeverityBadge } from "@/features/scan-workspace/components/severity-badge";
+import type { ScanHistoryItemDto } from "@/types/api";
+import { getScanRecord } from "@/services/scan.service";
+import { useScanStore } from "@/lib/store/scan-store";
+
+interface ScanHistoryTableProps {
+  items: ScanHistoryItemDto[];
+  isLoading?: boolean;
+}
+
+const SKELETON_ROWS = 8;
+
+function SkeletonRows(): JSX.Element {
+  return (
+    <>
+      {Array.from({ length: SKELETON_ROWS }).map((_, i) => (
+        <tr key={i} className="border-t border-gray-100 animate-pulse">
+          <td className="px-4 py-3">
+            <div className="h-3 w-36 rounded bg-gray-100" />
+          </td>
+          <td className="px-4 py-3">
+            <div className="h-5 w-12 rounded bg-gray-100" />
+          </td>
+          <td className="px-4 py-3">
+            <div className="h-5 w-16 rounded-full bg-gray-100" />
+          </td>
+          <td className="px-4 py-3">
+            <div className="h-5 w-14 rounded-full bg-gray-100" />
+          </td>
+          <td className="px-4 py-3">
+            <div className="h-3 w-10 rounded bg-gray-100" />
+          </td>
+          <td className="px-4 py-3">
+            <div className="h-3 w-28 rounded bg-gray-100" />
+          </td>
+          <td className="px-4 py-3 text-right">
+            <div className="ml-auto h-3 w-12 rounded bg-gray-100" />
+          </td>
+        </tr>
+      ))}
+    </>
+  );
+}
+
+export function ScanHistoryTable({
+  items,
+  isLoading = false,
+}: ScanHistoryTableProps): JSX.Element {
+  const router = useRouter();
+  const { setLatestResult, setCode, setLanguage } = useScanStore();
+  const [loadingId, setLoadingId] = useState<string | null>(null);
+
+  const handleRowClick = async (id: string) => {
+    if (loadingId) return;
+    setLoadingId(id);
+    try {
+      const res = await getScanRecord(id);
+      if (res.status === "success") {
+        setLatestResult({
+          scan_id: res.data.scan_id,
+          is_vulnerable: res.data.is_vulnerable,
+          confidence: res.data.confidence,
+          risk_level: res.data.risk_level,
+          findings: res.data.findings,
+        });
+        setCode(res.data.source_code);
+        setLanguage(res.data.language);
+        router.push("/scan/result");
+      }
+    } catch (err) {
+      console.error("Failed to load scan record", err);
+    } finally {
+      setLoadingId(null);
+    }
+  };
+
+  const thClass =
+    "sticky top-0 z-10 bg-gray-50 px-4 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-text-muted border-b border-gray-200 whitespace-nowrap";
+
+  return (
+    <section
+      className="rounded-lg border border-border bg-white shadow-sm overflow-hidden"
+      aria-label="Scan history results"
+    >
+      <div className="overflow-x-auto">
+        <table className="min-w-full text-xs">
+          <thead>
+            <tr>
+              <th scope="col" className={thClass}>Filename</th>
+              <th scope="col" className={thClass}>Language</th>
+              <th scope="col" className={thClass}>Risk</th>
+              <th scope="col" className={thClass}>Status</th>
+              <th scope="col" className={thClass}>Confidence</th>
+              <th scope="col" className={thClass}>Created</th>
+              <th scope="col" className={cn(thClass, "text-right")}>Action</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100">
+            {isLoading ? (
+              <SkeletonRows />
+            ) : items.length === 0 ? (
+              <tr>
+                <td colSpan={7}>
+                  <div
+                    className="flex flex-col items-center justify-center py-16 text-center"
+                    aria-live="polite"
+                  >
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 text-text-muted">
+                      <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth={1.5}
+                        className="h-5 w-5"
+                      >
+                        <circle cx="11" cy="11" r="8" />
+                        <path d="m21 21-4.35-4.35" />
+                      </svg>
+                    </div>
+                    <p className="mt-3 text-xs font-semibold text-text-primary">
+                      No scan records found
+                    </p>
+                    <p className="mt-1 text-[11px] text-text-muted max-w-xs leading-relaxed">
+                      Try adjusting your search or filters, or run a new scan in the workspace.
+                    </p>
+                  </div>
+                </td>
+              </tr>
+            ) : (
+              items.map((item) => (
+                <tr
+                  key={item.id}
+                  className={cn(
+                    "cursor-pointer transition-colors group",
+                    loadingId === item.id
+                      ? "bg-primary/5"
+                      : "hover:bg-gray-50/80",
+                  )}
+                  onClick={() => handleRowClick(item.id)}
+                  tabIndex={0}
+                  role="button"
+                  aria-label={`View scan details for ${item.filename ?? "Untitled source"}`}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") handleRowClick(item.id);
+                  }}
+                >
+                  {/* Filename */}
+                  <td className="px-4 py-2.5 font-semibold text-text-primary group-hover:text-primary transition-colors max-w-[200px]">
+                    <span className="block truncate">
+                      {item.filename ?? "Untitled source"}
+                    </span>
+                  </td>
+
+                  {/* Language tag */}
+                  <td className="px-4 py-2.5">
+                    <span className="inline-flex items-center rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-text-secondary">
+                      {item.language}
+                    </span>
+                  </td>
+
+                  {/* Risk badge */}
+                  <td className="px-4 py-2.5">
+                    <SeverityBadge severity={item.risk_level} />
+                  </td>
+
+                  {/* Vulnerable status pill */}
+                  <td className="px-4 py-2.5">
+                    {item.is_vulnerable ? (
+                      <span className="inline-flex items-center rounded-full border border-severity-critical/20 bg-severityBg-critical px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-severity-critical">
+                        Vulnerable
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center rounded-full border border-severity-safe/20 bg-severityBg-safe px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-severity-safe">
+                        Safe
+                      </span>
+                    )}
+                  </td>
+
+                  {/* Confidence mono */}
+                  <td className="px-4 py-2.5 font-mono font-semibold text-text-secondary">
+                    {(item.confidence * 100).toFixed(0)}%
+                  </td>
+
+                  {/* Timestamp mono */}
+                  <td className="px-4 py-2.5 font-mono text-[10px] text-text-muted whitespace-nowrap">
+                    {new Date(item.created_at).toLocaleDateString(undefined, {
+                      year: "2-digit",
+                      month: "short",
+                      day: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </td>
+
+                  {/* Action */}
+                  <td className="px-4 py-2.5 text-right">
+                    <button
+                      type="button"
+                      className="text-[11px] font-semibold text-primary hover:underline disabled:cursor-not-allowed disabled:opacity-40 transition-colors"
+                      disabled={loadingId !== null}
+                      tabIndex={-1}
+                      aria-hidden="true"
+                    >
+                      {loadingId === item.id ? "Loading…" : "View →"}
+                    </button>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
+}

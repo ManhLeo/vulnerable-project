@@ -1,0 +1,180 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: 220 20% 97%;
+  --foreground: 222 47% 11%;
+  --card: 0 0% 100%;
+  --card-foreground: 222 47% 11%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 222 47% 11%;
+
+  --primary: 217 91% 60%;
+  --primary-foreground: 210 40% 98%;
+  --primary-hover: 221 83% 53%;
+  --primary-subtle: 214 100% 97%;
+
+  --secondary: 210 20% 96%;
+  --secondary-foreground: 215 25% 27%;
+  --muted: 210 20% 96%;
+  --muted-foreground: 215 16% 47%;
+
+  --accent: 210 20% 96%;
+  --accent-foreground: 222 47% 11%;
+
+  --destructive: 0 72% 51%;
+  --destructive-foreground: 210 40% 98%;
+
+  --border: 214 20% 90%;
+  --border-strong: 215 16% 82%;
+  --input: 214 20% 86%;
+  --ring: 217 91% 60%;
+
+  --surface-page: 220 20% 97%;
+  --surface-panel: 0 0% 100%;
+  --surface-elevated: 0 0% 100%;
+  --surface-subtle: 210 20% 96%;
+
+  --text-primary: 222 47% 11%;
+  --text-secondary: 215 25% 27%;
+  --text-muted: 215 16% 47%;
+  --text-placeholder: 217 10% 72%;
+
+  --severity-critical: 0 74% 52%;
+  --severity-critical-bg: 0 86% 97%;
+  --severity-high: 24 95% 45%;
+  --severity-high-bg: 34 100% 96%;
+  --severity-medium: 38 92% 42%;
+  --severity-medium-bg: 48 100% 95%;
+  --severity-low: 217 91% 60%;
+  --severity-low-bg: 214 100% 97%;
+  --severity-safe: 142 72% 35%;
+  --severity-safe-bg: 138 76% 97%;
+
+  --radius: 0.5rem;
+}
+
+* {
+  @apply border-border;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  @apply bg-background text-foreground antialiased;
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+}
+
+/* Text selection */
+::selection {
+  background-color: hsl(var(--primary) / 0.15);
+  color: hsl(var(--text-primary));
+}
+
+@layer base {
+  h1 {
+    @apply text-[28px] font-semibold leading-tight tracking-tight text-foreground;
+  }
+
+  h2 {
+    @apply text-lg font-semibold leading-7 text-foreground;
+  }
+
+  h3 {
+    @apply text-[15px] font-semibold leading-6 text-foreground;
+  }
+
+  p {
+    @apply text-sm leading-6 text-foreground;
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    color: hsl(var(--text-placeholder));
+  }
+
+  /* Ensure all interactive elements have a visible focus outline */
+  :focus-visible {
+    outline: 2px solid hsl(var(--primary));
+    outline-offset: 2px;
+  }
+
+  /* Remove default focus for mouse/touch — keep for keyboard */
+  :focus:not(:focus-visible) {
+    outline: none;
+  }
+}
+
+@layer utilities {
+  /* Shimmer skeleton animation */
+  .animate-shimmer {
+    background: linear-gradient(
+      90deg,
+      #f3f4f6 0%,
+      #e9eaec 40%,
+      #f3f4f6 80%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.6s ease-in-out infinite;
+  }
+
+  /* Override Tailwind's animate-pulse with a subtler shimmer for skeletons */
+  .animate-pulse {
+    animation: pulse-subtle 1.8s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+@keyframes pulse-subtle {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
+
+@keyframes spin-slow {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Thin custom scrollbar for findings panels */
+.scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--border-strong)) transparent;
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+  width: 4px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background-color: hsl(var(--border-strong));
+  border-radius: 99px;
+}
+
