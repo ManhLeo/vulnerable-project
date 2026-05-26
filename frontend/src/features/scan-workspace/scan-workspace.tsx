@@ -10,6 +10,7 @@ import { CodeEditorPanel } from "@/features/scan-workspace/components/code-edito
 import { FindingsCountSummary } from "@/features/scan-workspace/components/findings-count-summary";
 import { FindingsPanel } from "@/features/scan-workspace/components/findings-panel";
 import { LanguageSelector } from "@/features/scan-workspace/components/language-selector";
+import { ModelSelector } from "@/features/scan-workspace/components/model-selector";
 import { RiskSummaryPanel } from "@/features/scan-workspace/components/risk-summary-panel";
 import { ScanActions } from "@/features/scan-workspace/components/scan-actions";
 import { ScanStatusPanel } from "@/features/scan-workspace/components/scan-status-panel";
@@ -99,10 +100,28 @@ export function ScanWorkspace(): JSX.Element {
       </section>
 
       <section className="sticky top-14 z-20 rounded-lg border border-border bg-surface-panel/95 p-3 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-surface-panel/85">
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] md:items-end">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)_minmax(0,1.2fr)_auto] md:items-end">
           <LanguageSelector value={language} onChange={setLanguage} disabled={isScanning} />
+          <ModelSelector disabled={isScanning} />
           <UploadPanel
-            onFileChange={setSelectedFile}
+            onFileChange={(nextFile) => {
+              setSelectedFile(nextFile);
+              if (!nextFile) {
+                return;
+              }
+
+              void (async () => {
+                try {
+                  const text = await nextFile.text();
+                  setCode(text);
+                  setLatestResult(null);
+                  setHasTriggeredScan(false);
+                  setSelectedFindingIndex(null);
+                } catch {
+                  // If we cannot read file content, keep current code.
+                }
+              })();
+            }}
             disabled={isScanning}
             selectedFileName={selectedFile?.name}
           />

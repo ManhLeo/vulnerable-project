@@ -16,6 +16,7 @@ from app.core.config import settings
 class InferenceOutput:
     is_vulnerable: bool
     confidence: float
+    vulnerability_probability: float
 
 
 class InferenceService:
@@ -41,14 +42,21 @@ class InferenceService:
             logits = outputs.logits
 
             if logits.shape[-1] == 1:
-                prob = torch.sigmoid(logits).squeeze().item()
+                prob_vulnerable = torch.sigmoid(logits).squeeze().item()
             else:
                 probs = torch.softmax(logits, dim=-1)
-                prob = probs[..., 1].squeeze().item() if logits.shape[-1] > 1 else probs.squeeze().item()
+                prob_vulnerable = (
+                    probs[..., 1].squeeze().item() if logits.shape[-1] > 1 else probs.squeeze().item()
+                )
 
-        confidence = float(max(0.0, min(1.0, prob)))
-        is_vulnerable = confidence >= self.threshold
-        return InferenceOutput(is_vulnerable=is_vulnerable, confidence=round(confidence, 4))
+        prob_vulnerable = float(max(0.0, min(1.0, prob_vulnerable)))
+        is_vulnerable = prob_vulnerable >= self.threshold
+        confidence = prob_vulnerable if is_vulnerable else 1.0 - prob_vulnerable
+        return InferenceOutput(
+            is_vulnerable=is_vulnerable,
+            confidence=round(confidence, 4),
+            vulnerability_probability=round(prob_vulnerable, 4),
+        )
 
     async def predict(self, source_code: str, language: str) -> InferenceOutput:
         if not model_manager.is_loaded():

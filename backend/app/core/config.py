@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from pydantic import Field, computed_field
+from pydantic import AliasChoices, Field, computed_field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -13,11 +13,19 @@ class Settings(BaseSettings):
 
     api_v1_prefix: str = Field(default="/api/v1")
 
-    mongodb_uri: str = Field(default="mongodb://localhost:27017")
-    mongodb_db_name: str = Field(default="vuln_scanner")
-    mongodb_server_selection_timeout_ms: int = Field(default=2000)
-    mongodb_connect_timeout_ms: int = Field(default=2000)
-    mongodb_socket_timeout_ms: int = Field(default=2000)
+    mongodb_uri: str = Field(
+        default="mongodb://localhost:27017",
+        validation_alias=AliasChoices("MONGODB_URL", "MONGODB_URI", "mongodb_uri"),
+    )
+    mongodb_db_name: str = Field(
+        default="vuln_scanner",
+        validation_alias=AliasChoices("MONGODB_DB_NAME", "mongodb_db_name"),
+    )
+    mongodb_server_selection_timeout_ms: int = Field(default=5000)
+    mongodb_connect_timeout_ms: int = Field(default=5000)
+    mongodb_socket_timeout_ms: int = Field(default=10000)
+    mongodb_max_pool_size: int = Field(default=50)
+    mongodb_scans_collection: str = Field(default="scans")
     use_in_memory_repository: bool = Field(default=False)
 
     model_name_or_path: str = Field(default="microsoft/codebert-base")

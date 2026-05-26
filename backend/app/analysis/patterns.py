@@ -22,18 +22,6 @@ C_CPP_RULES: Final[list[PatternRule]] = [
     PatternRule("memcpy", "Potential unsafe memory copy", re.compile(r"\bmemcpy\s*\(")),
 ]
 
-PYTHON_RULES: Final[list[PatternRule]] = [
-    PatternRule("eval", "Potential code injection", re.compile(r"\beval\s*\(")),
-    PatternRule("exec", "Potential command/code execution", re.compile(r"\bexec\s*\(")),
-    PatternRule("pickle.loads", "Unsafe deserialization", re.compile(r"\bpickle\.loads\s*\(")),
-    PatternRule("os.system", "Potential command injection", re.compile(r"\bos\.system\s*\(")),
-    PatternRule(
-        "subprocess(shell=True)",
-        "Shell execution with shell=True",
-        re.compile(r"\bsubprocess\.\w+\s*\([^)]*shell\s*=\s*True"),
-    ),
-]
-
 SQL_RULES: Final[list[PatternRule]] = [
     PatternRule(
         "sql_concat",
@@ -52,8 +40,6 @@ SQL_RULES: Final[list[PatternRule]] = [
 
 def get_pattern_rules(language: str) -> list[PatternRule]:
     normalized = language.strip().lower()
-    if normalized in {"c", "cpp", "c++"}:
+    if normalized in {"c", "cpp", "c++", "h", "hpp"}:
         return [*C_CPP_RULES, *SQL_RULES]
-    if normalized in {"py", "python"}:
-        return [*PYTHON_RULES, *SQL_RULES]
-    return [*SQL_RULES]
+    return []

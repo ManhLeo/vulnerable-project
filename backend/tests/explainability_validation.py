@@ -21,24 +21,19 @@ def main() -> None:
         "c",
     )
     run_case(
-        "vulnerable_python_os_system",
-        "import os\nos.system(input())",
-        "py",
+        "vulnerable_c_gets",
+        '#include <stdio.h>\nint main(){char buf[8]; gets(buf); return 0;}',
+        "c",
     )
     run_case(
-        "sql_injection_pattern",
-        'query = "SELECT * FROM users WHERE id=" + user_input',
-        "py",
+        "sql_injection_pattern_cpp",
+        '#include <string>\n#include <sqlite3.h>\nvoid query(std::string name) {\n    std::string q = "SELECT * FROM users WHERE name=\'" + name + "\'";\n}',
+        "cpp",
     )
     run_case(
-        "mixed_python",
-        'def ok():\n    x=1\nimport os\nos.system("ls")\nquery = "SELECT * FROM t WHERE id=" + user_input',
-        "py",
-    )
-    run_case(
-        "safe_python",
-        "def add(a,b):\n    return a+b",
-        "py",
+        "safe_c_add",
+        "int add(int a, int b){\n    return a+b;\n}",
+        "c",
     )
 
 

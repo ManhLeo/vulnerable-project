@@ -1,71 +1,182 @@
-# Báo Cáo Đánh Giá & Thành Tựu Dự Án "Vulnerable Project"
+# Báo cáo đánh giá & thành tựu — Vulnerable Project
 
-**Ngày đánh giá:** Tháng 5/2026
-**Mục tiêu:** Quét toàn bộ dự án để kiểm tra chất lượng code (clean code), phát hiện lỗi tiềm ẩn và tổng hợp các thành tựu đã đạt được.
-
----
-
-## 1. Thành Tựu Đã Đạt Được (Achievements)
-
-Dự án đã xây dựng thành công nền tảng (foundation) cho cả Backend và Frontend, đạt tiêu chuẩn Production-ready ở mức cơ bản.
-
-### 1.1 Backend (FastAPI + AI + MongoDB)
-- **Kiến trúc phân tầng (Clean Architecture):** Tách biệt rõ ràng các lớp API (`routes`), Business Logic (`services`), AI Inference (`ai`), Phân tích (`analysis`), và Database (`db`).
-- **Tích hợp AI Model:** Triển khai thành công module tải và chạy model phân tích lỗ hổng `microsoft/codebert-base` (hỗ trợ load từ local checkpoint để tối ưu thời gian khởi động).
-- **Quản lý Database (Repository Pattern):** Sử dụng `motor` (MongoDB async) với Pattern Repository (`ScanRepository`), giúp cô lập tầng database với logic nghiệp vụ.
-- **Xử lý lỗi & Logging tập trung:** Bắt và chuẩn hóa toàn bộ response lỗi (400, 413, 422, 500) qua `app/core/exceptions.py` và `app/core/response.py`.
-- **API đã hoàn thiện:**
-  - `GET /health`, `GET /model/info`
-  - `POST /scan/code`, `POST /scan/file`
-  - `GET /scan/history`
-
-### 1.2 Frontend (Next.js + Tailwind CSS)
-- **Hệ thống Design System:** Khởi tạo thành công App Shell với giao diện Dark/Light mode dựa trên CSS Variables và Tailwind.
-- **UI Primitives:** Đã xây dựng các component tái sử dụng cao (`Button`, `Card`, `Badge`, `Input`, `Skeleton`).
-- **Layout:** Thiết kế Sidebar Navigation và Topbar Status có khả năng responsive (thu gọn trên mobile).
-- **Trạng thái:** Tích hợp Skeleton loading để cải thiện UX khi chờ dữ liệu.
+**Ngày cập nhật:** Tháng 5/2026  
+**Phạm vi:** Monorepo `backend/` + `frontend/` + tài liệu vận hành  
+**Mục tiêu:** Tổng hợp tính năng đã triển khai, đánh giá chất lượng mã, và ghi nhận khoảng trống / việc cần làm tiếp.
 
 ---
 
-## 2. Đánh Giá Code & Lỗi Tiềm Ẩn (Code Review & Potential Bugs)
+## 1. Tóm tắt trạng thái triển khai
 
-Nhìn chung, source code được tổ chức rất bài bản, tuân thủ chặt chẽ các best practice về type hint, Pydantic validation và DI (Dependency Injection). Tuy nhiên, vẫn tồn tại một số vấn đề cần khắc phục:
+| Hạng mục | Trạng thái |
+|----------|------------|
+| Quét mã C/C++ (paste + upload) | Hoàn thành |
+| AI CodeBERT + pattern rules | Hoàn thành |
+| Lưu lịch sử scan (MongoDB Atlas) | Hoàn thành |
+| Chế độ in-memory (dev không MongoDB) | Hoàn thành |
+| Đổi checkpoint model runtime | Hoàn thành (API + UI selector) |
+| Dashboard & lịch sử có filter | Hoàn thành (UI; dashboard stats client-side) |
+| Xóa bản ghi scan | API hoàn thành; **chưa có UI** |
+| README monorepo / backend / frontend | Đã cập nhật (05/2026) |
 
-### 2.1 Backend Bugs & Tech Debt
-1. **Lỗi Deprecation (FastAPI):**
-   - **Vấn đề:** Trong `backend/app/main.py`, đang sử dụng `@app.on_event("startup")` và `@app.on_event("shutdown")`. Các event này đã bị **deprecated** trong các phiên bản FastAPI mới (từ 0.93.0+).
-   - **Giải pháp:** Cần migrate sang sử dụng cấu trúc `lifespan` context manager.
-   ```python
-   from contextlib import asynccontextmanager
-   
-   @asynccontextmanager
-   async def lifespan(app: FastAPI):
-       # Startup
-       await mongo_manager.connect()
-       await model_manager.load()
-       yield
-       # Shutdown
-       await model_manager.unload()
-       await mongo_manager.disconnect()
-       
-   app = FastAPI(lifespan=lifespan, ...)
-   ```
-2. **Thiếu cơ chế Rate Limiting:** Các endpoint upload file (`/scan/file`) hoặc scan code trực tiếp dễ bị lạm dụng dẫn đến DDoS hoặc OOM (Out of Memory) trên GPU/CPU nếu gọi liên tục. Cần bổ sung `slowapi` hoặc Redis rate limiter.
-3. **Bảo mật File Upload:** Mặc dù đã chặn file quá lớn (413), cần kiểm tra kỹ việc đọc file nhị phân (binary data) hoặc file chứa mã độc có thể khai thác lỗ hổng thư viện parser. (Hiện tại đang parse text với `errors="ignore"` là tạm ổn nhưng cần cẩn trọng).
-4. **Testing Coverage:** `backend/TODO.md` chỉ ra rằng các endpoint vẫn cần re-test (kiểm thử lại) bằng cURL/Postman, đặc biệt là các edge cases sau khi sửa logic `is_vulnerable`.
-
-### 2.2 Frontend Bugs & Tech Debt
-1. **Chưa hoàn tất kiểm định (Validation):** `frontend/TODO.md` cho thấy bước chạy `npm run lint` và `npm run build` chưa được tick xanh. Có rủi ro tồn đọng lỗi TypeScript type-mismatch hoặc ESLint rules chưa pass.
-2. **Thiếu State Management:** Dự án có vẻ sẽ phức tạp khi hiển thị Findings & Risk Summary. Nếu chỉ dùng React Context đơn giản có thể gây re-render toàn bộ App Shell. Cần cân nhắc Zustand nếu state phình to.
-3. **Chưa xử lý lỗi Network (Error Boundaries):** Cần đảm bảo các component gọi API được bọc trong React Error Boundary để tránh trắng trang khi backend sập.
+**Ngôn ngữ hỗ trợ thực tế:** `c`, `cpp` (file `.c`, `.cpp`, `.h`, `.hpp`). README cũ từng ghi Python/Java — **không còn đúng** với pipeline hiện tại.
 
 ---
 
-## 3. Đề Xuất Hành Động Tiếp Theo (Next Steps)
+## 2. Thành tựu đã hoàn thiện
 
-Là một AI Engineer hướng tới hệ thống Production-grade, tôi đề xuất các bước tối ưu sau:
+### 2.1 Backend (FastAPI)
 
-1. **Refactor Backend Lifespan:** Sửa ngay file `main.py` để loại bỏ deprecation warning, đảm bảo tương thích lâu dài.
-2. **Stress Test AI Model:** Thực hiện load test (dùng Locust/k6) trên endpoint `/scan/code` để xem CodeBERT xử lý concurrent requests như thế nào (có bị nghẽn ở CPU/GPU memory không).
-3. **Hoàn thiện Frontend:** Chạy `npm run lint` và `npm run build` để fix toàn bộ lỗi TypeScript trước khi ghép nối API.
-4. **Cập nhật TODO list:** Tích chọn các mục đã hoàn thành và tập trung vào phase tiếp theo: Ghép nối (Integration) Frontend và Backend.
+**Kiến trúc tầng**
+
+- `api/routes` → `services` → `ai` / `analysis` → `db/repositories`
+- Dependency injection repository qua `app/api/dependencies.py`
+- `lifespan` trong `main.py`: MongoDB (hoặc bỏ qua nếu in-memory) → `ensure_indexes()` → load model → shutdown ngược lại
+
+**AI inference**
+
+- `model_manager.py`: load `microsoft/codebert-base`, checkpoint `.pt` từ `backend/models/codebert-base/`
+- Hỗ trợ đổi checkpoint: `POST /api/v1/model/select`
+- `inference.py`: forward pass trong thread pool (`asyncio.to_thread`), ngưỡng `MODEL_VULNERABILITY_THRESHOLD`
+
+**Phân tích lai (hybrid)**
+
+- Pattern regex: `strcpy`, `gets`, `system`, `sprintf`, … (`analysis/patterns.py`)
+- Gộp verdict ML + rule: nếu có finding `HIGH`/`CRITICAL` → `is_vulnerable = true`
+- `risk_score` + `risk_level` (`analysis/risk.py`, `severity.py`)
+
+**Persistence & schema**
+
+- `DatabaseManager` (`core/database.py`): ping Atlas/local, pool, tạo index trên collection `scans`
+- Domain models (`models/scan_models.py`): `ScanCreate`, `ScanDocument`, `ScanHistoryFilters`, `DashboardStats`, …
+- `document_mapper.py`: map domain ↔ document MongoDB (nested `prediction`, `analysis`, `metadata`)
+- `ScanRepository` + `InMemoryScanRepository`: CRUD, history **có filter** (`filename`, `language`, `risk_level`, `is_vulnerable`, `search`)
+- `db/security.py`: sanitize source, regex filter an toàn, validate `scan_id`
+- Script index: `scripts/mongodb_create_indexes.py`
+- Hướng dẫn Atlas: `docs/mongodb_atlas_setup.md`
+
+**API (`/api/v1`)**
+
+| Method | Path | Ghi chú |
+|--------|------|---------|
+| GET | `/health` | Health check |
+| POST | `/scan/code` | Rate limit 10/phút |
+| POST | `/scan/file` | Upload multipart |
+| GET | `/scan/history` | Pagination + filters |
+| GET | `/scan/dashboard/stats` | Thống kê server-side |
+| GET | `/scan/{record_id}` | Chi tiết + source |
+| DELETE | `/scan/{record_id}` | Xóa bản ghi |
+| GET | `/model/info` | Checkpoint đang dùng |
+| POST | `/model/select` | Đổi checkpoint |
+
+**Vận hành & bảo mật cơ bản**
+
+- CORS, request logging (UUID), SlowAPI rate limit
+- Exception handlers chuẩn `error_response()` + mã `error_code`
+- Giới hạn upload 5 MB; extension whitelist
+
+### 2.2 Frontend (Next.js 14)
+
+**Trang & luồng**
+
+| Route | Chức năng |
+|-------|-----------|
+| `/` | Scan workspace: Monaco, upload, language, model selector, findings |
+| `/dashboard` | Stat cards, risk distribution, recent scans, activity feed |
+| `/scan/history` | Bảng lịch sử, filter, pagination |
+| `/scan/result` | Báo cáo chi tiết từ Zustand |
+
+**Kỹ thuật**
+
+- Zustand (`scan-store`): code, language, `latestResult`, finding selection
+- TanStack Query: scan mutations, history query, model info / select
+- Axios client + chuẩn hóa lỗi API (`lib/api/client.ts`)
+- Monaco: highlight dòng theo findings
+- Mở lại scan từ history: `getScanRecord(id)` → hydrate store (recent list / history table)
+
+**Theme & UX**
+
+- App shell, sidebar, design tokens CSS, skeleton loaders
+
+### 2.3 Tài liệu & vận hành
+
+- [README.md](README.md) — tổng quan monorepo, persistence, API/UI routes
+- [backend/README.md](backend/README.md) — env, model, API chi tiết
+- [frontend/README.md](frontend/README.md) — setup, cấu trúc `src/`
+- [docs/mongodb_atlas_setup.md](docs/mongodb_atlas_setup.md) — Atlas + indexes
+
+**Persistence sau restart server**
+
+- `USE_IN_MEMORY_REPOSITORY=false` + MongoDB Atlas → **lịch sử scan vẫn còn**
+- `USE_IN_MEMORY_REPOSITORY=true` → mất khi tắt process
+- State workspace trên browser (Zustand) → mất khi refresh; load lại qua History/API
+
+---
+
+## 3. Đánh giá chất lượng mã nguồn
+
+### 3.1 Điểm mạnh
+
+- **Backend:** Type hints nhất quán; tách repository/domain mapper rõ; filter history đã dùng cùng query cho `find` và `count` (không còn lỗi count toàn collection khi filter).
+- **Frontend:** Cấu trúc `features/` + `services/` + `hooks/` dễ đọc; ESLint sạch trong các lần kiểm tra trước.
+- **Hợp đồng API:** Envelope `{ status, data, message }` / `{ status, message, error_code }` thống nhất.
+
+### 3.2 Điểm cần cải thiện
+
+- Một số module legacy / trùng vai trò (ví dụ `app/db/mongo.py` chỉ re-export `database_manager`).
+- Response OpenAPI chưa gắn `response_model` ở routes → Swagger kém chi tiết.
+- Dashboard frontend vẫn **tổng hợp từ history client-side** thay vì gọi `GET /scan/dashboard/stats` (API backend đã có).
+
+---
+
+## 4. Mã / module dư thừa hoặc chưa dùng hết
+
+### 4.1 Backend
+
+| Thành phần | Trạng thái | Ghi chú |
+|------------|------------|---------|
+| `app/schemas/health.py`, `model.py`, phần `common.py`, `scan.py` (response DTO) | **Ít / không dùng** | Routes trả `success_response(dict)`; chỉ `ScanCodeRequest` trong `schemas/scan.py` được import |
+| `DEFAULT_SUCCESS_MESSAGE`, `INTERNAL_SERVER_ERROR_MESSAGE` trong `constants.py` | **Có thể chưa dùng** | `response.py` vẫn hard-code message |
+| `ValidationException` trong `exceptions.py` | **Không dùng** | Đã có handler `RequestValidationError` |
+| `app_host`, `app_port` trong `config.py` | **Không đọc khi chạy uvicorn CLI** | Host/port lấy từ lệnh terminal |
+| `app/repositories/scan_repository.py` | Re-export | Entry point kiến trúc; implementation thật ở `db/repositories/` |
+
+**Đã khắc phục so với báo cáo trước**
+
+- Domain models `app/models/scan_models.py` **đang được dùng** bởi service + repository (không phải dead code).
+- `list_scan_history` đã hỗ trợ filter đúng qua `ScanHistoryFilters` + `_build_history_query`.
+
+### 4.2 Frontend
+
+- Không ghi nhận dead code đáng kể trong lần rà soát trước.
+- **Thiếu tích hợp:** `DELETE /scan/{id}`, `GET /scan/dashboard/stats` chưa có service/hook/UI.
+
+---
+
+## 5. Khoảng trống chức năng (gaps)
+
+| Gap | Mức độ | Mô tả |
+|-----|--------|--------|
+| UI xóa scan | Trung bình | API có; frontend chưa |
+| Dashboard dùng API stats | Thấp | Trùng logic client vs server |
+| Mở rộng ngôn ngữ (Python/Java) | Roadmap | Pattern/rules chưa có cho ngôn ngữ khác |
+| Auth / multi-user | Roadmap | Chưa có |
+| `.env.example` backend | Thấp | Template nên có trong repo (tránh commit `.env`) |
+
+---
+
+## 6. Hành động đề xuất (ưu tiên)
+
+1. **Dọn hoặc tận dụng `app/schemas/` response models** — gắn `response_model` trên routes để OpenAPI chính xác, hoặc xóa class không dùng.
+2. **Frontend:** gọi `GET /api/v1/scan/dashboard/stats` trên Dashboard; thêm nút xóa + `DELETE` trên History.
+3. **Dùng hằng `constants.py`** trong `response.py` / `exceptions.py` thay vì string lặp.
+4. **Bảo mật:** không commit `backend/.env`; rotate credential nếu từng lộ; siết IP whitelist Atlas ở production.
+5. **Kiểm thử:** chạy `pytest` backend + smoke test upload/scan/history sau đổi MongoDB.
+
+---
+
+## 7. Kết luận
+
+Dự án đã đạt **MVP end-to-end**: quét C/C++ bằng AI + rules, hiển thị explainability trên Monaco, lưu và xem lại lịch sử qua MongoDB Atlas, đổi checkpoint model từ UI. Kiến trúc backend được củng cố thêm lớp domain model và persistence an toàn hơn so với phiên bản “foundation” ban đầu.
+
+Phần còn lại chủ yếu là **hoàn thiện tích hợp frontend** (stats API, delete), **dọn dead schema**, và **hardening** cho môi trường production.

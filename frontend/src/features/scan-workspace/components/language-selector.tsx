@@ -3,10 +3,7 @@
 import { Badge } from "@/components/ui/badge";
 
 const LANGUAGE_OPTIONS = [
-  { value: "py", label: "Python" },
-  { value: "java", label: "Java" },
-  { value: "c", label: "C" },
-  { value: "cpp", label: "C++" },
+  { value: "c_cpp", label: "C/C++" },
 ] as const;
 
 interface LanguageSelectorProps {

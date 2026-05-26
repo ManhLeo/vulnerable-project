@@ -24,9 +24,11 @@ export interface HealthDataDto {
 
 export interface ModelInfoDto {
   model_name: string;
-  model_version: string;
+  model_loaded: boolean;
   device: string;
-  labels: string[];
+  supports_gpu: boolean;
+  active_checkpoint: string;
+  available_checkpoints: string[];
 }
 
 export interface FindingDto {

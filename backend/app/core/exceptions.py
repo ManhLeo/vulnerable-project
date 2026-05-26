@@ -28,6 +28,15 @@ class ValidationException(AppException):
         super().__init__(message=message, error_code=error_code, status_code=422)
 
 
+class ConflictException(AppException):
+    def __init__(
+        self,
+        message: str = "Resource already exists",
+        error_code: str = "CONFLICT",
+    ) -> None:
+        super().__init__(message=message, error_code=error_code, status_code=409)
+
+
 class InternalServerException(AppException):
     def __init__(
         self,

@@ -14,7 +14,7 @@ from app.core.config import settings
 from app.core.exceptions import AppException
 from app.core.logging import RequestLoggingMiddleware, setup_logging
 from app.core.response import error_response
-from app.db.mongo import mongo_manager
+from app.core.database import database_manager
 from app.core.limiter import limiter
 from slowapi.errors import RateLimitExceeded
 
@@ -26,13 +26,18 @@ logger = logging.getLogger("app.main")
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("application_startup_begin")
-    await mongo_manager.connect()
+    if settings.use_in_memory_repository:
+        logger.info("repository_mode=in_memory mongodb_skipped")
+    else:
+        await database_manager.connect()
+        await database_manager.ensure_indexes()
     await model_manager.load()
     logger.info("application_startup_complete")
     yield
     logger.info("application_shutdown_begin")
     await model_manager.unload()
-    await mongo_manager.disconnect()
+    if not settings.use_in_memory_repository:
+        await database_manager.disconnect()
     logger.info("application_shutdown_complete")
 
 

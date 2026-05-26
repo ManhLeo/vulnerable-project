@@ -26,6 +26,7 @@ class ScanCodeRequest(BaseModel):
         language_aliases = {
             "python": "py",
             "c++": "cpp",
+            "c_cpp": "cpp",
         }
         return language_aliases.get(normalized, normalized)
 

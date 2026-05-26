@@ -16,6 +16,8 @@ class LoadedModelInfo:
     model_name: str
     device: str
     loaded: bool
+    active_checkpoint: str
+    available_checkpoints: list[str]
 
 
 class ModelManager:
@@ -30,36 +32,61 @@ class ModelManager:
 
         self._tokenizer = None
         self._model = None
+        self._active_checkpoint: str = "best_codebert_linevul.pt"
 
-    async def _load_sync(self) -> None:
+    def get_available_checkpoints(self) -> list[str]:
         backend_root = Path(__file__).resolve().parents[2]
         local_model_dir = backend_root / "models" / "codebert-base"
-        local_checkpoint = local_model_dir / "best_codebert_vulnerability.pt"
+        if not local_model_dir.exists():
+            return []
+        return sorted([f.name for f in local_model_dir.glob("*.pt")])
+
+    def _load_checkpoint_sync(self, checkpoint_name: str) -> None:
+        backend_root = Path(__file__).resolve().parents[2]
+        local_model_dir = backend_root / "models" / "codebert-base"
+        local_checkpoint = local_model_dir / checkpoint_name
 
         if local_model_dir.exists():
             self._logger.info("local_model_dir_detected path=%s", str(local_model_dir))
-            try:
-                self._tokenizer = AutoTokenizer.from_pretrained(str(local_model_dir), local_files_only=False)
-                self._model = AutoModelForSequenceClassification.from_pretrained(
-                    str(local_model_dir),
-                    local_files_only=False,
-                )
-            except Exception as local_dir_exc:
-                self._logger.warning(
-                    "local_model_dir_incomplete_fallback_to_hf path=%s error=%s",
-                    str(local_model_dir),
-                    str(local_dir_exc),
-                )
-                self._tokenizer = AutoTokenizer.from_pretrained(self._model_name)
-                self._model = AutoModelForSequenceClassification.from_pretrained(self._model_name)
+            
+            # Initialize tokenizer if not already done
+            if self._tokenizer is None:
+                try:
+                    self._tokenizer = AutoTokenizer.from_pretrained(str(local_model_dir), local_files_only=False)
+                except Exception as local_dir_exc:
+                    self._logger.warning(
+                        "local_tokenizer_load_failed_fallback_to_hf path=%s error=%s",
+                        str(local_model_dir),
+                        str(local_dir_exc),
+                    )
+                    self._tokenizer = AutoTokenizer.from_pretrained(self._model_name)
+
+            # Initialize base model structure if not already done
+            if self._model is None:
+                try:
+                    self._model = AutoModelForSequenceClassification.from_pretrained(
+                        str(local_model_dir),
+                        local_files_only=False,
+                    )
+                except Exception as local_dir_exc:
+                    self._logger.warning(
+                        "local_model_load_failed_fallback_to_hf path=%s error=%s",
+                        str(local_model_dir),
+                        str(local_dir_exc),
+                    )
+                    self._model = AutoModelForSequenceClassification.from_pretrained(self._model_name)
 
             if local_checkpoint.exists():
                 self._logger.info("local_checkpoint_detected path=%s", str(local_checkpoint))
-                state = torch.load(str(local_checkpoint), map_location=self._device)
+                try:
+                    state = torch.load(str(local_checkpoint), map_location=self._device, weights_only=False)
+                except TypeError:
+                    state = torch.load(str(local_checkpoint), map_location=self._device)
+
                 if isinstance(state, dict) and "state_dict" in state and isinstance(state["state_dict"], dict):
                     state = state["state_dict"]
                 if not isinstance(state, dict):
-                    raise RuntimeError("Invalid checkpoint format for best_codebert_vulnerability.pt")
+                    raise RuntimeError(f"Invalid checkpoint format for {checkpoint_name}")
 
                 cleaned_state: dict[str, torch.Tensor] = {}
                 model_state = self._model.state_dict()
@@ -86,12 +113,20 @@ class ModelManager:
                     self._logger.warning("checkpoint_missing_keys count=%s", len(missing_keys))
                 if unexpected_keys:
                     self._logger.warning("checkpoint_unexpected_keys count=%s", len(unexpected_keys))
+            else:
+                raise FileNotFoundError(f"Checkpoint file '{checkpoint_name}' not found at {local_checkpoint}")
         else:
-            self._tokenizer = AutoTokenizer.from_pretrained(self._model_name)
-            self._model = AutoModelForSequenceClassification.from_pretrained(self._model_name)
+            if self._tokenizer is None:
+                self._tokenizer = AutoTokenizer.from_pretrained(self._model_name)
+            if self._model is None:
+                self._model = AutoModelForSequenceClassification.from_pretrained(self._model_name)
+            self._logger.warning("local_model_dir not found, fallback to Hugging Face without custom checkpoint")
 
         self._model.to(self._device)
         self._model.eval()
+
+    async def _load_sync(self) -> None:
+        await asyncio.to_thread(self._load_checkpoint_sync, self._active_checkpoint)
 
     async def load(self) -> None:
         async with self._lock:
@@ -100,13 +135,26 @@ class ModelManager:
             try:
                 await self._load_sync()
                 self._loaded = True
-                self._logger.info("model_loaded model=%s device=%s", self._model_name, self._device)
+                self._logger.info("model_loaded model=%s device=%s checkpoint=%s", self._model_name, self._device, self._active_checkpoint)
             except Exception as exc:
                 self._loaded = False
                 self._tokenizer = None
                 self._model = None
                 self._logger.exception("model_load_failed error=%s", str(exc))
                 raise RuntimeError("Failed to load model") from exc
+
+    async def change_checkpoint(self, checkpoint_name: str) -> None:
+        async with self._lock:
+            backend_root = Path(__file__).resolve().parents[2]
+            local_model_dir = backend_root / "models" / "codebert-base"
+            local_checkpoint = local_model_dir / checkpoint_name
+            if not local_checkpoint.exists():
+                raise FileNotFoundError(f"Checkpoint file '{checkpoint_name}' not found.")
+            
+            await asyncio.to_thread(self._load_checkpoint_sync, checkpoint_name)
+            self._active_checkpoint = checkpoint_name
+            self._loaded = True
+            self._logger.info("Successfully switched to checkpoint: %s", checkpoint_name)
 
     async def unload(self) -> None:
         async with self._lock:
@@ -131,6 +179,8 @@ class ModelManager:
             model_name=self._model_name,
             device=self._device,
             loaded=self._loaded,
+            active_checkpoint=self._active_checkpoint,
+            available_checkpoints=self.get_available_checkpoints(),
         )
 
 

@@ -47,30 +47,25 @@ def main() -> None:
         "source_code": "#include <string.h>\nint main(){char buf[8]; strcpy(buf, \"AAAAAAAAAAAAAAAA\"); return 0;}",
         "language": "c",
     }
-    vuln_py = {
-        "source_code": "import os\nos.system(input())",
-        "language": "py",
+    sqli_c = {
+        "source_code": "char query[256]; sprintf(query, \"SELECT * FROM users WHERE name='%s'\", input);",
+        "language": "c",
     }
-    sqli_py = {
-        "source_code": "query = \"SELECT * FROM users WHERE id=\" + user_input",
-        "language": "py",
+    safe_c = {
+        "source_code": "int add(int a, int b) {\n    return a + b;\n}",
+        "language": "c",
     }
-    safe_py = {
-        "source_code": "def add(a, b):\n    return a + b",
-        "language": "py",
-    }
-    mixed_py = {
-        "source_code": "def ok():\n    x = 1\nimport os\nos.system('ls')\nquery = \"SELECT * FROM t WHERE id=\" + user_input",
-        "language": "py",
+    mixed_cpp = {
+        "source_code": "#include <iostream>\n#include <string.h>\nint main() {\n    char buf[8];\n    strcpy(buf, \"AAA\");\n    system(\"ls\");\n    return 0;\n}",
+        "language": "cpp",
     }
 
     post_scan_code(vuln_c, "scan_code_vulnerable_c")
-    post_scan_code(vuln_py, "scan_code_vulnerable_python")
-    post_scan_code(sqli_py, "scan_code_sql_injection")
-    post_scan_code(safe_py, "scan_code_safe_python")
-    post_scan_code(mixed_py, "scan_code_mixed_python")
-    post_scan_code({"source_code": "console.log(1)", "language": "js"}, "scan_code_unsupported_language")
-    post_scan_code({"source_code": "", "language": "py"}, "scan_code_empty_source")
+    post_scan_code(sqli_c, "scan_code_sql_injection_c")
+    post_scan_code(safe_c, "scan_code_safe_c")
+    post_scan_code(mixed_cpp, "scan_code_mixed_cpp")
+    post_scan_code({"source_code": "import os\nos.system('ls')", "language": "py"}, "scan_code_unsupported_language")
+    post_scan_code({"source_code": "", "language": "c"}, "scan_code_empty_source")
 
     malformed = requests.post(
         f"{BASE_URL}/scan/code",
@@ -81,12 +76,12 @@ def main() -> None:
     print_result("scan_code_malformed_json", malformed)
 
     # 2) /scan/file validation
-    post_scan_file("sample.py", b"import os\nos.system(input())", "py", "scan_file_valid")
+    post_scan_file("sample.cpp", b"#include <iostream>\nint main(){ return 0; }", "cpp", "scan_file_valid")
     malformed_multipart = requests.post(f"{BASE_URL}/scan/file", data="invalid", timeout=60)
     print_result("scan_file_malformed_multipart", malformed_multipart)
     post_scan_file("sample.exe", b"MZ...", None, "scan_file_unsupported_extension")
-    post_scan_file("empty.py", b"", "py", "scan_file_empty_file")
-    post_scan_file("big.py", b"a" * (5 * 1024 * 1024 + 10), "py", "scan_file_oversized")
+    post_scan_file("empty.cpp", b"", "cpp", "scan_file_empty_file")
+    post_scan_file("big.cpp", b"a" * (5 * 1024 * 1024 + 10), "cpp", "scan_file_oversized")
 
     # 3) /scan/history + pagination
     get_history(1, 5, "scan_history_page_1_limit_5")

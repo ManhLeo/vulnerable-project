@@ -32,15 +32,11 @@ export function UploadPanel({
         id="code-file"
         type="file"
         disabled={disabled}
-        accept=".py,.java,.c,.cpp,text/plain"
+        accept=".c,.cpp,.h,.hpp,text/plain"
         onChange={handleFileInput}
         className="block h-9 w-full rounded-md border border-border bg-surface-panel px-3 text-sm file:mr-3 file:rounded-md file:border-0 file:bg-surface-subtle file:px-2.5 file:py-1 file:text-xs file:font-semibold disabled:cursor-not-allowed disabled:opacity-60"
       />
-      {selectedFileName ? (
-        <p className="text-xs text-text-primary">Selected: {selectedFileName}</p>
-      ) : (
-        <p className="text-xs text-text-muted">No file selected (.py, .java, .c, .cpp)</p>
-      )}
+      
     </div>
   );
 }
