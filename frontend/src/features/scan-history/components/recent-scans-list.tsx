@@ -4,6 +4,7 @@ import { SeverityBadge } from "@/features/scan-workspace/components/severity-bad
 import type { ScanHistoryItemDto } from "@/types/api";
 import { getScanRecord } from "@/services/scan.service";
 import { useScanStore } from "@/lib/store/scan-store";
+import type { AppApiError } from "@/lib/api/client";
 
 interface RecentScansListProps {
   items: ScanHistoryItemDto[];
@@ -13,10 +14,12 @@ export function RecentScansList({ items }: RecentScansListProps): JSX.Element {
   const router = useRouter();
   const { setLatestResult, setCode, setLanguage } = useScanStore();
   const [loadingId, setLoadingId] = useState<string | null>(null);
+  const [detailError, setDetailError] = useState<AppApiError | null>(null);
 
   const handleRowClick = async (id: string) => {
     if (loadingId) return;
     setLoadingId(id);
+    setDetailError(null);
     try {
       const res = await getScanRecord(id);
       if (res.status === "success") {
@@ -32,7 +35,7 @@ export function RecentScansList({ items }: RecentScansListProps): JSX.Element {
         router.push("/scan/result");
       }
     } catch (err) {
-      console.error("Failed to load scan record", err);
+      setDetailError(err as AppApiError);
     } finally {
       setLoadingId(null);
     }
@@ -46,6 +49,14 @@ export function RecentScansList({ items }: RecentScansListProps): JSX.Element {
           Latest {items.length} runs
         </span>
       </div>
+
+      {detailError ? (
+        <div className="border-b border-severity-critical/20 bg-severityBg-critical px-4 py-3" role="alert">
+          <p className="text-xs font-semibold text-severity-critical">Unable to open scan detail</p>
+          <p className="mt-1 text-[11px] text-text-secondary">{detailError.message}</p>
+          <p className="mt-1 font-mono text-[10px] text-text-muted">Code: {detailError.error_code}</p>
+        </div>
+      ) : null}
 
       {items.length === 0 ? (
         <div className="p-8 text-center">

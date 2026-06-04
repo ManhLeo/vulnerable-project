@@ -9,6 +9,7 @@ export interface NavItem {
   href: string;
   label: string;
   shortLabel: string;
+  onClick?: () => void;
 }
 
 interface SidebarNavProps {
@@ -35,7 +36,13 @@ export function SidebarNav({ items, onNavigate }: SidebarNavProps): JSX.Element 
             <li key={item.href}>
               <Link
                 href={item.href}
-                onClick={onNavigate}
+                onClick={(e) => {
+                  if (item.onClick) {
+                    e.preventDefault();
+                    item.onClick();
+                  }
+                  if (onNavigate) onNavigate();
+                }}
                 className={cn(
                   "group flex items-center justify-between rounded-md px-3 py-2 text-sm font-medium transition-colors duration-150",
                   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",

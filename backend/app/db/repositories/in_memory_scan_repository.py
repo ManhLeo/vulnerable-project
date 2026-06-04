@@ -8,6 +8,7 @@ from app.db.document_mapper import (
     document_to_history_item,
     scan_create_to_document,
 )
+from app.db.security import sanitize_filter_string
 from app.models.scan_models import (
     DashboardStats,
     PaginationResponse,
@@ -22,6 +23,9 @@ class InMemoryScanRepository:
 
     def __init__(self) -> None:
         self._items: list[dict[str, Any]] = []
+
+    def clear(self) -> None:
+        self._items.clear()
 
     async def create_scan(self, scan: ScanCreate, scan_id: str) -> str:
         if any(item.get("scan_id") == scan_id for item in self._items):
@@ -54,8 +58,13 @@ class InMemoryScanRepository:
             limit=filters.limit,
         )
 
-    async def get_dashboard_stats(self) -> DashboardStats:
-        items = [document_to_history_item(doc) for doc in self._items]
+    async def get_dashboard_stats(self, user_id: str | None = None) -> DashboardStats:
+        docs = [
+            doc
+            for doc in self._items
+            if user_id is None or doc.get("user_id") == user_id
+        ]
+        items = [document_to_history_item(doc) for doc in docs]
         total = len(items)
         vulnerable = sum(1 for item in items if item.is_vulnerable)
         safe = total - vulnerable
@@ -93,14 +102,19 @@ class InMemoryScanRepository:
         items = deepcopy(self._items)
         items.sort(key=lambda doc: str(doc.get("created_at", "")), reverse=True)
 
-        if filters.language:
-            items = [doc for doc in items if doc.get("language") == filters.language]
+        language = sanitize_filter_string(filters.language, "language")
+        if language:
+            items = [doc for doc in items if doc.get("language") == language.lower()]
 
-        if filters.risk_level:
+        if filters.user_id:
+            items = [doc for doc in items if doc.get("user_id") == filters.user_id]
+
+        risk_level = sanitize_filter_string(filters.risk_level, "risk_level")
+        if risk_level:
             items = [
                 doc
                 for doc in items
-                if document_to_history_item(doc).risk_level == filters.risk_level
+                if document_to_history_item(doc).risk_level == risk_level.upper()
             ]
 
         if filters.is_vulnerable is not None:
@@ -110,16 +124,18 @@ class InMemoryScanRepository:
                 if document_to_history_item(doc).is_vulnerable == filters.is_vulnerable
             ]
 
-        if filters.filename:
-            needle = filters.filename.lower()
+        filename = sanitize_filter_string(filters.filename, "filename")
+        if filename:
+            needle = filename.lower()
             items = [
                 doc
                 for doc in items
                 if needle in str(doc.get("filename", "")).lower()
             ]
 
-        if filters.search:
-            needle = filters.search.lower()
+        search = sanitize_filter_string(filters.search, "search")
+        if search:
+            needle = search.lower()
             items = [
                 doc
                 for doc in items

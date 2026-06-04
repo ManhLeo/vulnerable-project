@@ -10,6 +10,7 @@ import torch
 from app.ai.model_manager import model_manager
 from app.ai.preprocessing import preprocess_source_code
 from app.core.config import settings
+from app.core.exceptions import ServiceUnavailableException
 
 
 @dataclass
@@ -60,7 +61,10 @@ class InferenceService:
 
     async def predict(self, source_code: str, language: str) -> InferenceOutput:
         if not model_manager.is_loaded():
-            raise RuntimeError("Model is not loaded")
+            raise ServiceUnavailableException(
+                message="AI model is currently unavailable",
+                error_code="MODEL_NOT_LOADED",
+            )
 
         prepared = preprocess_source_code(source_code)
         if not prepared:

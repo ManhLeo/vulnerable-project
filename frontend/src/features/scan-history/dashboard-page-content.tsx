@@ -4,12 +4,9 @@ import { useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { ErrorState } from "@/components/common/error-state";
 import { useScanHistoryQuery } from "@/hooks/use-scan-history-query";
+import { useScanStatsQuery } from "@/hooks/use-scan-stats-query";
 import { Button } from "@/components/ui/button";
-import {
-  buildDashboardSummary,
-  buildRiskDistribution,
-  getRecentScans,
-} from "@/lib/utils/scan-history";
+import { getRecentScans } from "@/lib/utils/scan-history";
 
 import { RecentScansList } from "./components/recent-scans-list";
 import { RiskDistributionSummary } from "./components/risk-distribution-summary";
@@ -18,24 +15,23 @@ import { ActivityFeed } from "./components/activity-feed";
 
 export function DashboardPageContent(): JSX.Element {
   const router = useRouter();
-  const { data, isLoading, isError, error } = useScanHistoryQuery({ page: 1, limit: 50 });
-
-  const summary = useMemo(() => {
-    const items = data?.data.items ?? [];
-    return buildDashboardSummary(items);
-  }, [data?.data.items]);
-
-  const distribution = useMemo(() => {
-    const items = data?.data.items ?? [];
-    return buildRiskDistribution(items);
-  }, [data?.data.items]);
+  const historyQuery = useScanHistoryQuery({ page: 1, limit: 50 });
+  const statsQuery = useScanStatsQuery();
 
   const recent = useMemo(() => {
-    const items = data?.data.items ?? [];
+    const items = historyQuery.data?.data.items ?? [];
     return getRecentScans(items, 6);
-  }, [data?.data.items]);
+  }, [historyQuery.data?.data.items]);
 
-  if (isLoading) {
+  const stats = statsQuery.data?.data;
+  const distribution = stats?.risk_distribution ?? {
+    LOW: 0,
+    MEDIUM: 0,
+    HIGH: 0,
+    CRITICAL: 0,
+  };
+
+  if (statsQuery.isLoading) {
     return (
       <div className="space-y-6">
         {/* Shimmer Stat Cards */}
@@ -80,16 +76,16 @@ export function DashboardPageContent(): JSX.Element {
     );
   }
 
-  if (isError) {
+  if (statsQuery.isError) {
     return (
       <ErrorState
         title="Unable to load dashboard"
-        message={error?.message ?? "Dashboard data request failed."}
+        message={statsQuery.error?.message ?? "Dashboard data request failed."}
       />
     );
   }
 
-  if ((data?.data.items ?? []).length === 0) {
+  if (!stats || stats.total_scans === 0) {
     return (
       <section className="rounded-lg border border-border bg-white p-12 text-center shadow-sm max-w-xl mx-auto mt-8">
         <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary-subtle text-primary border border-primary/10">
@@ -111,14 +107,21 @@ export function DashboardPageContent(): JSX.Element {
   return (
     <div className="space-y-6">
       <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <StatCard title="Total scans" value={summary.total} />
-        <StatCard title="Vulnerable scans" value={summary.vulnerable} />
-        <StatCard title="Safe scans" value={summary.safe} />
+        <StatCard title="Total scans" value={stats.total_scans} />
+        <StatCard title="Vulnerable scans" value={stats.vulnerable_scans} />
+        <StatCard title="Safe scans" value={stats.safe_scans} />
         <StatCard
           title="Avg confidence"
-          value={`${(summary.averageConfidence * 100).toFixed(1)}%`}
+          value={`${(stats.average_confidence * 100).toFixed(1)}%`}
         />
       </section>
+
+      {historyQuery.isError ? (
+        <ErrorState
+          title="Unable to load recent scans"
+          message={historyQuery.error?.message ?? "Recent scan history request failed."}
+        />
+      ) : null}
 
       <section className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         {/* Left 2 columns: Recent Scans Data Table */}

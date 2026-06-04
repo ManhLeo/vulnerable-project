@@ -6,20 +6,31 @@ import { useState } from "react";
 import { SidebarNav } from "@/components/layout/sidebar-nav";
 import { TopbarStatus } from "@/components/layout/topbar-status";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/hooks/useAuth";
 
 interface AppShellProps {
   children: ReactNode;
 }
 
-const navItems = [
-  { href: "/", label: "Home", shortLabel: "H" },
-  { href: "/scan/result", label: "Scan Result", shortLabel: "SR" },
-  { href: "/scan/history", label: "Scan History", shortLabel: "SH" },
-  { href: "/dashboard", label: "Dashboard", shortLabel: "DB" },
-];
-
 export function AppShell({ children }: AppShellProps): JSX.Element {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { user, isAuthenticated, logout } = useAuth();
+
+  const navItems = [
+    { href: "/", label: "Home", shortLabel: "H" },
+    { href: "/scan/result", label: "Scan Result", shortLabel: "SR" },
+    ...(isAuthenticated ? [
+      { href: "/scan/history", label: "Scan History", shortLabel: "SH" }
+    ] : []),
+    ...(user?.role === "admin" ? [
+      { href: "/admin", label: "Admin Dashboard", shortLabel: "AD" }
+    ] : []),
+    ...(isAuthenticated ? [
+      { href: "#", label: "Logout", shortLabel: "LO", onClick: logout }
+    ] : [
+      { href: "/login", label: "Login", shortLabel: "LI" }
+    ])
+  ];
 
   return (
     <div className="min-h-screen bg-surface-page text-foreground">

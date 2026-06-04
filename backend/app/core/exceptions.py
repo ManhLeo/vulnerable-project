@@ -37,6 +37,15 @@ class ConflictException(AppException):
         super().__init__(message=message, error_code=error_code, status_code=409)
 
 
+class ServiceUnavailableException(AppException):
+    def __init__(
+        self,
+        message: str = "Service temporarily unavailable",
+        error_code: str = "SERVICE_UNAVAILABLE",
+    ) -> None:
+        super().__init__(message=message, error_code=error_code, status_code=503)
+
+
 class InternalServerException(AppException):
     def __init__(
         self,

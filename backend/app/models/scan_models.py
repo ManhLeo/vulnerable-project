@@ -45,7 +45,7 @@ class MetadataInfo(BaseModel):
     threshold: float = Field(..., ge=0.0, le=1.0)
     checkpoint: str | None = Field(default=None, max_length=256)
 
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="forbid", protected_namespaces=())
 
 
 class ScanCreate(BaseModel):
@@ -55,6 +55,7 @@ class ScanCreate(BaseModel):
     language: str = Field(..., min_length=1, max_length=16)
     code: str = Field(..., min_length=1)
     filename: str | None = Field(default=None, max_length=255)
+    user_id: str | None = Field(default=None, max_length=36)
     prediction: PredictionResult
     analysis: AnalysisResult
     metadata: MetadataInfo
@@ -85,6 +86,7 @@ class ScanHistoryFilters(BaseModel):
     risk_level: str | None = Field(default=None, max_length=32)
     is_vulnerable: bool | None = None
     search: str | None = Field(default=None, max_length=255)
+    user_id: str | None = Field(default=None, max_length=36)
 
     @field_validator("language")
     @classmethod
@@ -135,6 +137,7 @@ class ScanDetailResponse(BaseModel):
     """Detail view — includes source code and findings for the result page."""
 
     scan_id: str
+    user_id: str | None = None
     source_type: str
     filename: str | None = None
     language: str

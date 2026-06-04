@@ -39,6 +39,10 @@ backend/models/
 .env.development.local
 .env.test.local
 .env.production.local
+.env.production
+backend/.env.production
+frontend/.env.production
+**/.env.production
 *.env
 *.env.local
 

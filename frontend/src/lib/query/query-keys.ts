@@ -10,6 +10,7 @@ export const queryKeys = {
     all: ["scan"] as const,
     code: ["scan", "code"] as const,
     file: ["scan", "file"] as const,
+    stats: ["scan", "stats"] as const,
   },
   history: {
     all: ["history"] as const,

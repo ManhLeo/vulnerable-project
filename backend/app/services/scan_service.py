@@ -49,6 +49,7 @@ class ScanService:
         language: str,
         filename: str | None = None,
         source_type: SourceType = SourceType.CODE,
+        user_id: str | None = None,
     ) -> dict[str, Any]:
         normalized_language = language.strip().lower()
         language_aliases = {
@@ -96,6 +97,7 @@ class ScanService:
             ),
             analysis=AnalysisResult(suspicious_patterns=findings_to_patterns(finding_dicts)),
             metadata=self._build_metadata(),
+            user_id=user_id,
         )
 
         await self.repository.create_scan(scan_create, scan_id)
@@ -113,6 +115,7 @@ class ScanService:
         filename: str,
         content_bytes: bytes,
         language_hint: str | None = None,
+        user_id: str | None = None,
     ) -> dict[str, Any]:
         if not content_bytes:
             raise BadRequestException(message="Empty file upload", error_code="EMPTY_FILE")
@@ -135,6 +138,7 @@ class ScanService:
             language=normalized_language,
             filename=safe_name,
             source_type=SourceType.FILE,
+            user_id=user_id,
         )
 
     async def get_scan_history(
@@ -146,6 +150,7 @@ class ScanService:
         risk_level: str | None = None,
         is_vulnerable: bool | None = None,
         search: str | None = None,
+        user_id: str | None = None,
     ) -> dict[str, Any]:
         filters = ScanHistoryFilters(
             page=page,
@@ -155,12 +160,13 @@ class ScanService:
             risk_level=risk_level,
             is_vulnerable=is_vulnerable,
             search=search,
+            user_id=user_id,
         )
         pagination = await self.repository.get_scan_history(filters)
         return pagination.model_dump()
 
-    async def get_dashboard_stats(self) -> dict[str, Any]:
-        stats = await self.repository.get_dashboard_stats()
+    async def get_dashboard_stats(self, user_id: str | None = None) -> dict[str, Any]:
+        stats = await self.repository.get_dashboard_stats(user_id=user_id)
         return stats.model_dump()
 
     async def get_scan_record(self, record_id: str) -> dict[str, Any] | None:
@@ -170,6 +176,7 @@ class ScanService:
 
         return {
             "scan_id": detail.scan_id,
+            "user_id": detail.user_id,
             "filename": detail.filename,
             "language": detail.language,
             "source_code": detail.source_code,

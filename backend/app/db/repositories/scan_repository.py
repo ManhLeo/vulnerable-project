@@ -62,6 +62,9 @@ class ScanRepository:
                 build_safe_regex_filter("language", search),
             ]
 
+        if filters.user_id:
+            query["user_id"] = filters.user_id
+
         return query
 
     async def create_scan(self, scan: ScanCreate, scan_id: str) -> str:
@@ -129,16 +132,18 @@ class ScanRepository:
                 error_code="DATABASE_UNAVAILABLE",
             ) from exc
 
-    async def get_dashboard_stats(self) -> DashboardStats:
+    async def get_dashboard_stats(self, user_id: str | None = None) -> DashboardStats:
         """Aggregate dashboard metrics server-side."""
+        base_query: dict[str, Any] = {"user_id": user_id} if user_id else {}
         try:
-            total_scans = await self.collection.count_documents({})
+            total_scans = await self.collection.count_documents(base_query)
             vulnerable_scans = await self.collection.count_documents(
-                {"prediction.is_vulnerable": True}
+                {**base_query, "prediction.is_vulnerable": True}
             )
             safe_scans = max(0, total_scans - vulnerable_scans)
 
             avg_pipeline = [
+                {"$match": base_query},
                 {
                     "$group": {
                         "_id": None,
@@ -151,6 +156,7 @@ class ScanRepository:
             average_confidence = float(avg_result[0]["average_confidence"]) if avg_result else 0.0
 
             risk_pipeline = [
+                {"$match": base_query},
                 {"$group": {"_id": "$prediction.risk_level", "count": {"$sum": 1}}},
             ]
             risk_cursor = self.collection.aggregate(risk_pipeline)

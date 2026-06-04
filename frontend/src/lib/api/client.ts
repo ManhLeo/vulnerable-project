@@ -59,14 +59,22 @@ export function normalizeApiError(error: unknown): AppApiError {
 }
 
 function createApiClient(): AxiosInstance {
-  const baseURL =
-    env.NEXT_PUBLIC_API_BASE_URL && env.NEXT_PUBLIC_API_BASE_URL.trim().length > 0
-      ? env.NEXT_PUBLIC_API_BASE_URL
-      : "http://localhost:8000";
+  const isLocalDevProxy =
+    typeof window !== "undefined" &&
+    process.env.NODE_ENV !== "production" &&
+    !!env.NEXT_PUBLIC_API_BASE_URL &&
+    (env.NEXT_PUBLIC_API_BASE_URL.includes("localhost") || env.NEXT_PUBLIC_API_BASE_URL.includes("127.0.0.1"));
+
+  const baseURL = isLocalDevProxy
+    ? ""
+    : env.NEXT_PUBLIC_API_BASE_URL && env.NEXT_PUBLIC_API_BASE_URL.trim().length > 0
+    ? env.NEXT_PUBLIC_API_BASE_URL
+    : "";
 
   const client = axios.create({
     baseURL,
     timeout: 15000,
+    withCredentials: true,
     headers: {
       "Content-Type": "application/json",
     },

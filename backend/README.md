@@ -63,9 +63,12 @@ Interactive API: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
 | `MONGODB_DB_NAME` | `vuln_scanner` | Database name |
 | `MONGODB_SCANS_COLLECTION` | `scans` | Collection for scan documents |
 | `USE_IN_MEMORY_REPOSITORY` | `false` | `true` = no MongoDB, data lost on restart |
+| `JWT_SECRET_KEY` | development default | JWT signing secret. Required to be non-default in production. |
 | `MODEL_NAME_OR_PATH` | `microsoft/codebert-base` | Hugging Face model id or local path |
 | `MODEL_DEVICE` | `cpu` | `cpu` or `cuda` (uses GPU if available) |
 | `MODEL_VULNERABILITY_THRESHOLD` | `0.8` | Score threshold for ML “vulnerable” flag |
+| `ADMIN_EMAIL` | | Optional default admin email. If set, an admin account is created/promoted on startup when no admin exists. |
+| `ADMIN_PASSWORD` | | Optional default admin password. Must satisfy the password policy if `ADMIN_EMAIL` is set. |
 | `MAX_UPLOAD_SIZE_BYTES` | `5242880` | Max upload size (5 MB) |
 | `CORS_ALLOWED_ORIGINS_RAW` | `http://localhost:3000` | Comma-separated origins |
 | `LOG_LEVEL` | `INFO` | Logging level |
@@ -121,11 +124,12 @@ List and switch checkpoints via:
 | POST | `/scan/code` | JSON: `{ "source_code", "language" }` — rate limited |
 | POST | `/scan/file` | multipart: `file`, optional `language` |
 | GET | `/scan/history` | Query: `page`, `limit`, `filename`, `language`, `risk_level`, `is_vulnerable`, `search` |
-| GET | `/scan/dashboard/stats` | Aggregates for dashboard |
+| GET | `/scan/stats` | Aggregate scan stats scoped to current user; admins see all |
 | GET | `/scan/{record_id}` | Full scan including `source_code` |
 | DELETE | `/scan/{record_id}` | Remove scan |
 | GET | `/model/info` | Model load state and checkpoints |
 | POST | `/model/select` | Switch checkpoint |
+| GET | `/admin/stats` | Admin-only system-wide stats |
 
 ### Supported inputs
 
@@ -166,10 +170,17 @@ Error:
 
 ```bash
 # from backend/
-pytest tests/
+python -m compileall -q app
+pytest -q
 ```
 
-Additional scripts: `tests/api_validation.py`, `tests/explainability_validation.py`
+Default pytest collection also includes root-level lightweight tests. Integration scripts that require a running server remain manual: `tests/api_validation.py`, `tests/explainability_validation.py`.
+
+## Production security notes
+
+- Set `APP_ENV=production`.
+- Set `JWT_SECRET_KEY` to a strong non-default secret; production startup fails if the development default is used.
+- Keep `.env.production` untracked. If it was added to git before the ignore rule existed, remove it from the index with `git rm --cached backend/.env.production`.
 
 ## Docker
 

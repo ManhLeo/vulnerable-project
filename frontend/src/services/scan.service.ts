@@ -5,6 +5,7 @@ import type {
   ScanCodeResultDto,
   ScanHistoryDataDto,
   ScanHistoryQueryDto,
+  ScanStatsDto,
 } from "@/types/api";
 
 export async function scanCode(
@@ -55,6 +56,13 @@ export async function getScanRecord(
 ): Promise<ApiSuccessResponse<ScanCodeResultDto & { source_code: string; language: string; filename: string | null }>> {
   const response = await apiClient.get<ApiSuccessResponse<ScanCodeResultDto & { source_code: string; language: string; filename: string | null }>>(
     `/api/v1/scan/${id}`,
+  );
+  return response.data;
+}
+
+export async function getScanStats(): Promise<ApiSuccessResponse<ScanStatsDto>> {
+  const response = await apiClient.get<ApiSuccessResponse<ScanStatsDto>>(
+    "/api/v1/scan/stats",
   );
   return response.data;
 }

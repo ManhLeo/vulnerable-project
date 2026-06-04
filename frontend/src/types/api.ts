@@ -19,7 +19,23 @@ export type ApiResponse<TData> = ApiSuccessResponse<TData> | ApiErrorResponse;
 export interface HealthDataDto {
   service: string;
   status: string;
+  version: string;
+  environment: string;
   timestamp: string;
+  uptime: number;
+  uptime_seconds: number;
+  database: {
+    status: "connected" | "disconnected" | "skipped";
+    mode: "mongodb" | "in_memory";
+  };
+  model: {
+    status: "loaded" | "not_loaded";
+    loaded: boolean;
+    name: string;
+    device: string;
+    checkpoint: string | null;
+  };
+  degraded: boolean;
 }
 
 export interface ModelInfoDto {
@@ -72,4 +88,13 @@ export interface ScanHistoryDataDto {
   total: number;
   page: number;
   limit: number;
+}
+
+export interface ScanStatsDto {
+  total_scans: number;
+  vulnerable_scans: number;
+  safe_scans: number;
+  vulnerable_ratio: number;
+  average_confidence: number;
+  risk_distribution: Record<SeverityLevel, number>;
 }

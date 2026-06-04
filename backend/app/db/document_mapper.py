@@ -61,6 +61,7 @@ def scan_create_to_document(scan: ScanCreate, scan_id: str) -> dict[str, Any]:
         "source_type": scan.source_type.value,
         "language": scan.language,
         "filename": scan.filename,
+        "user_id": scan.user_id,
         "code": scan.code,
         "prediction": scan.prediction.model_dump(),
         "analysis": {
@@ -128,6 +129,7 @@ def document_to_detail(doc: dict[str, Any]) -> ScanDetailResponse:
 
     return ScanDetailResponse(
         scan_id=scan_id,
+        user_id=doc.get("user_id"),
         source_type=str(doc.get("source_type", "code")),
         filename=doc.get("filename"),
         language=str(doc.get("language", "")),

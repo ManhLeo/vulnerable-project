@@ -40,8 +40,11 @@ Detailed setup: [backend/README.md](backend/README.md) · [frontend/README.md](f
 
 ```bash
 cd backend
+python -m venv .venv
+.venv\Scripts\activate
 pip install -r requirements.txt
-cp .env.example .env   # then edit values
+copy .env.example .env
+rem # Edit backend/.env to set JWT_SECRET_KEY, MongoDB URI, and other settings.
 python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
 ```
 
@@ -53,18 +56,32 @@ $env:USE_IN_MEMORY_REPOSITORY="true"
 python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
 ```
 
+```bash
+# macOS / Linux
+USE_IN_MEMORY_REPOSITORY=true python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
+```
+
 API docs: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
+
+> Production note: `backend/.env.production` is available as a sample production config.
+> Security note: production startup requires a non-default `JWT_SECRET_KEY`. Keep `.env.production` untracked and remove it from git index if it was previously added: `git rm --cached backend/.env.production`.
 
 ### 2. Frontend
 
 ```bash
 cd frontend
 npm install
-cp .env.example .env.local
+copy .env.example .env.local
 npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000).
+
+### 3. Notes
+
+- The frontend expects the backend at `http://localhost:8000` by default.
+- If you use a custom backend origin, set `NEXT_PUBLIC_API_BASE_URL` in `frontend/.env.local`.
+- Backend cookies are set as `HttpOnly` and `Secure`; for local testing, ensure the browser accepts them.
 
 ## Persistence
 
@@ -85,9 +102,10 @@ Base path: `/api/v1`
 | POST | `/scan/code` | Analyze pasted source |
 | POST | `/scan/file` | Analyze uploaded file |
 | GET | `/scan/history` | Paginated history + filters |
-| GET | `/scan/dashboard/stats` | Dashboard aggregates |
+| GET | `/scan/stats` | Aggregate scan stats scoped to the current user; admins see all |
 | GET | `/scan/{record_id}` | Single scan detail |
 | DELETE | `/scan/{record_id}` | Delete scan |
+| GET | `/admin/stats` | Admin-only system-wide stats |
 | GET | `/model/info` | Model / checkpoint status |
 | POST | `/model/select` | Switch checkpoint |
 
@@ -110,8 +128,23 @@ Rate limit: **10 requests/minute** on scan endpoints.
 ## Security notes
 
 - Do not commit `backend/.env` or secrets; use `.env.example` as a template.
+- Do not commit `.env.production`; it is ignored as a local secret file.
+- Set a strong `JWT_SECRET_KEY` in production. The backend rejects the built-in development default when `APP_ENV=production`.
 - Restrict MongoDB Atlas network access in production.
 - Uploaded source may be stored in MongoDB when persistence is enabled.
+
+## Tests
+
+```bash
+cd backend
+python -m compileall -q app
+pytest -q
+
+cd ../frontend
+npm run typecheck
+npm run lint
+npm run build
+```
 
 ## License
 

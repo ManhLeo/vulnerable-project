@@ -12,6 +12,8 @@ from app.core.config import settings
 logger = logging.getLogger("app.core.database")
 
 SCANS_COLLECTION = "scans"
+USERS_COLLECTION = "users"
+AUDIT_LOGS_COLLECTION = "audit_logs"
 
 
 class DatabaseManager:
@@ -57,6 +59,10 @@ class DatabaseManager:
     def get_collection(self, name: str = SCANS_COLLECTION):
         return self.db[name]
 
+    @property
+    def is_connected(self) -> bool:
+        return self._client is not None and self._db is not None
+
     async def ensure_indexes(self) -> None:
         """Create production indexes on the scans collection (idempotent)."""
         if self._indexes_ready:
@@ -84,12 +90,26 @@ class DatabaseManager:
                 ],
                 name="idx_history_compound",
             ),
+            IndexModel([("user_id", ASCENDING)], name="idx_scans_user_id"),
+        ]
+
+        user_index_models = [
+            IndexModel([("email", ASCENDING)], name="idx_users_email", unique=True),
+            IndexModel([("role", ASCENDING)], name="idx_users_role"),
+        ]
+
+        audit_index_models = [
+            IndexModel([("user_id", ASCENDING)], name="idx_audit_user_id"),
+            IndexModel([("action", ASCENDING)], name="idx_audit_action"),
+            IndexModel([("created_at", DESCENDING)], name="idx_audit_created_at"),
         ]
 
         try:
             await collection.create_indexes(index_models)
+            await self.get_collection(USERS_COLLECTION).create_indexes(user_index_models)
+            await self.get_collection(AUDIT_LOGS_COLLECTION).create_indexes(audit_index_models)
             self._indexes_ready = True
-            logger.info("mongodb_indexes_ensured collection=%s", SCANS_COLLECTION)
+            logger.info("mongodb_indexes_ensured collections=scans,users,audit_logs")
         except OperationFailure as exc:
             logger.exception("mongodb_index_creation_failed error=%s", str(exc))
             raise
