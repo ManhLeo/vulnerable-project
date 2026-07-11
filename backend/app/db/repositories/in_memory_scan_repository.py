@@ -89,6 +89,11 @@ class InMemoryScanRepository:
             risk_distribution=risk_distribution,
         )
 
+    async def list_all_for_export(self) -> list[dict[str, Any]]:
+        items = deepcopy(self._items)
+        items.sort(key=lambda doc: str(doc.get("created_at", "")), reverse=True)
+        return items
+
     async def delete_scan(self, scan_id: str) -> bool:
         before = len(self._items)
         self._items = [

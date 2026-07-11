@@ -5,6 +5,18 @@ export interface UiFinding extends FindingDto {
   id: string;
   line: number;
   severity: SeverityLevel;
+  pattern: string;
+  issue: string;
+  code: string;
+}
+
+export function formatConfidence(value: number | null | undefined): string {
+  if (value === null || value === undefined || Number.isNaN(value)) {
+    return "N/A";
+  }
+
+  const percentage = value <= 1 ? value * 100 : value;
+  return `${Math.round(percentage)}%`;
 }
 
 export function normalizeFindings(findings: FindingDto[] | undefined): UiFinding[] {
@@ -14,8 +26,12 @@ export function normalizeFindings(findings: FindingDto[] | undefined): UiFinding
 
   return findings.map((finding, index) => ({
     ...finding,
-    line: Math.max(1, Number.isFinite(finding.line) ? finding.line : 1),
-    id: `${finding.pattern}-${finding.line}-${index}`,
+    line: Math.max(1, Number.isFinite(finding.line ?? NaN) ? Number(finding.line) : 1),
+    severity: finding.severity ?? "LOW",
+    pattern: finding.pattern ?? finding.title ?? finding.name ?? "Security finding",
+    issue: finding.issue ?? finding.description ?? "No description provided.",
+    code: finding.code ?? "",
+    id: `${finding.pattern ?? finding.title ?? "finding"}-${finding.line ?? "na"}-${index}`,
   }));
 }
 

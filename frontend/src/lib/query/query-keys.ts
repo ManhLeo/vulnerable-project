@@ -6,6 +6,11 @@ export const queryKeys = {
     all: ["model"] as const,
     info: ["model", "info"] as const,
   },
+  admin: {
+    all: ["admin"] as const,
+    stats: ["admin", "stats"] as const,
+    users: ["admin", "users"] as const,
+  },
   scan: {
     all: ["scan"] as const,
     code: ["scan", "code"] as const,

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import csv
+import io
 from collections.abc import Iterator
 from uuid import uuid4
 
@@ -47,6 +49,19 @@ async def _fake_predict(source_code: str, language: str) -> InferenceOutput:
         is_vulnerable=False,
         confidence=0.9,
         vulnerability_probability=0.1,
+    )
+
+
+async def _fake_predict_with_checkpoint(
+    source_code: str,
+    language: str,
+    checkpoint_name: str,
+) -> InferenceOutput:
+    confidence = 0.91 if checkpoint_name == "best_graphcodebert_linevul.pt" else 0.72
+    return InferenceOutput(
+        is_vulnerable=True,
+        confidence=confidence,
+        vulnerability_probability=confidence,
     )
 
 
@@ -118,6 +133,15 @@ async def test_auth_errors_are_enveloped(client: TestClient) -> None:
     unauthenticated = client.get("/api/v1/auth/me")
     assert unauthenticated.status_code == 401
     _assert_error_envelope(unauthenticated.json(), "UNAUTHORIZED")
+    assert unauthenticated.json()["message"] == "Not authenticated"
+
+    invalid_token = client.get(
+        "/api/v1/auth/me",
+        headers={"Cookie": "access_token=invalid-token"},
+    )
+    assert invalid_token.status_code == 401
+    _assert_error_envelope(invalid_token.json(), "UNAUTHORIZED")
+    assert invalid_token.json()["message"] == "Invalid token"
 
 
 @pytest.mark.asyncio
@@ -188,7 +212,11 @@ async def test_scan_ownership_stats_and_admin_delete(
     assert deleted.status_code == 200
 
 
-def test_scan_code_validation_and_model_unavailable(client: TestClient) -> None:
+@pytest.mark.asyncio
+async def test_scan_code_validation_and_model_unavailable(client: TestClient) -> None:
+    await _create_user("scan-validation@example.com", "Password123", Role.USER)
+    client.post("/api/v1/auth/login", json={"email": "scan-validation@example.com", "password": "Password123"})
+
     unsupported = client.post(
         "/api/v1/scan/code",
         json={"source_code": "print('x')", "language": "python"},
@@ -212,7 +240,11 @@ def test_scan_file_upload_validation(
     client: TestClient,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    import asyncio
+
     monkeypatch.setattr(scan_service_module.inference_service, "predict", _fake_predict)
+    asyncio.run(_create_user("file-validation@example.com", "Password123", Role.USER))
+    client.post("/api/v1/auth/login", json={"email": "file-validation@example.com", "password": "Password123"})
 
     valid = client.post(
         "/api/v1/scan/file",
@@ -250,7 +282,11 @@ def test_scan_file_extension_aliases_wrong_hint_and_non_utf8(
     client: TestClient,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    import asyncio
+
     monkeypatch.setattr(scan_service_module.inference_service, "predict", _fake_predict)
+    asyncio.run(_create_user("file-aliases@example.com", "Password123", Role.USER))
+    client.post("/api/v1/auth/login", json={"email": "file-aliases@example.com", "password": "Password123"})
 
     header = client.post(
         "/api/v1/scan/file",
@@ -375,11 +411,24 @@ def test_model_info_and_select_error_envelopes(
     assert info.status_code == 200
     assert info.json()["data"]["active_checkpoint"] == "active.pt"
 
+    async def _create_admin_user() -> None:
+        await _create_user("model-admin-errors@example.com", "Password123", Role.ADMIN)
+
+    import asyncio
+
+    asyncio.run(_create_admin_user())
+
+    admin_client = _client()
+    admin_client.post(
+        "/api/v1/auth/login",
+        json={"email": "model-admin-errors@example.com", "password": "Password123"},
+    )
+
     async def missing_checkpoint(checkpoint_name: str) -> None:
         raise FileNotFoundError(checkpoint_name)
 
     monkeypatch.setattr(model_service_module.model_manager, "change_checkpoint", missing_checkpoint)
-    missing = client.post("/api/v1/model/select", json={"checkpoint_name": "missing.pt"})
+    missing = admin_client.post("/api/v1/model/select", json={"checkpoint_name": "missing.pt"})
     assert missing.status_code == 404
     _assert_error_envelope(missing.json(), "CHECKPOINT_NOT_FOUND")
 
@@ -387,9 +436,340 @@ def test_model_info_and_select_error_envelopes(
         raise RuntimeError("bad checkpoint")
 
     monkeypatch.setattr(model_service_module.model_manager, "change_checkpoint", load_failed)
-    failed = client.post("/api/v1/model/select", json={"checkpoint_name": "bad.pt"})
+    failed = admin_client.post("/api/v1/model/select", json={"checkpoint_name": "bad.pt"})
     assert failed.status_code == 503
     _assert_error_envelope(failed.json(), "CHECKPOINT_LOAD_FAILED")
+
+
+@pytest.mark.asyncio
+async def test_model_select_is_admin_only(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    await _create_user("model-user@example.com", "Password123", Role.USER)
+    await _create_user("model-admin@example.com", "Password123", Role.ADMIN)
+
+    guest = client.post("/api/v1/model/select", json={"checkpoint_name": "best_codebert_linevul.pt"})
+    assert guest.status_code == 401
+    _assert_error_envelope(guest.json(), "UNAUTHORIZED")
+
+    user_client = _client()
+    user_client.post("/api/v1/auth/login", json={"email": "model-user@example.com", "password": "Password123"})
+    denied = user_client.post("/api/v1/model/select", json={"checkpoint_name": "best_codebert_linevul.pt"})
+    assert denied.status_code == 403
+    _assert_error_envelope(denied.json(), "FORBIDDEN")
+
+    async def _noop_change_checkpoint(checkpoint_name: str) -> None:
+        return None
+
+    monkeypatch.setattr(model_service_module.model_manager, "change_checkpoint", _noop_change_checkpoint)
+    admin_client = _client()
+    admin_client.post("/api/v1/auth/login", json={"email": "model-admin@example.com", "password": "Password123"})
+    allowed = admin_client.post("/api/v1/model/select", json={"checkpoint_name": "best_codebert_linevul.pt"})
+    assert allowed.status_code == 200
+
+
+def test_model_info_includes_graphcodebert_and_ensemble_option(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        model_service_module.model_manager,
+        "info",
+        lambda: LoadedModelInfo(
+            model_name="test-model",
+            device="cpu",
+            loaded=True,
+            active_checkpoint="best_codebert_linevul.pt",
+            available_checkpoints=[
+                "best_codebert_linevul.pt",
+                "best_graphcodebert_linevul.pt",
+            ],
+        ),
+    )
+    monkeypatch.setattr(
+        model_service_module.model_manager,
+        "is_checkpoint_loaded",
+        lambda checkpoint_name: checkpoint_name == "best_codebert_linevul.pt",
+    )
+
+    response = client.get("/api/v1/model/info")
+    assert response.status_code == 200
+    data = response.json()["data"]
+    assert "best_graphcodebert_linevul.pt" in data["available_checkpoints"]
+    option_names = [item["checkpoint_name"] for item in data["available_model_options"]]
+    assert "__ensemble_best_confidence__" in option_names
+    assert data["supported_modes"] == ["single", "best_confidence"]
+
+
+def test_scan_code_without_model_mode_preserves_legacy_behavior(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import asyncio
+
+    monkeypatch.setattr(scan_service_module.inference_service, "predict", _fake_predict)
+    asyncio.run(_create_user("legacy-scan@example.com", "Password123", Role.USER))
+    client.post("/api/v1/auth/login", json={"email": "legacy-scan@example.com", "password": "Password123"})
+
+    response = client.post(
+        "/api/v1/scan/code",
+        json={"source_code": "int main(){return 0;}", "language": "c"},
+    )
+    assert response.status_code == 200
+    assert response.json()["data"]["metadata"]["model_mode"] == "single"
+
+
+def test_demo_samples_and_scan_do_not_call_inference(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    async def fail_predict(*args, **kwargs):
+        raise AssertionError("demo scan must not call inference")
+
+    monkeypatch.setattr(scan_service_module.inference_service, "predict", fail_predict)
+    monkeypatch.setattr(scan_service_module.inference_service, "predict_with_checkpoint", fail_predict)
+
+    samples = client.get("/api/v1/demo/samples")
+    assert samples.status_code == 200
+    sample_list = samples.json()["data"]
+    assert sample_list
+    assert {"id", "title", "language", "source_code", "description"} <= set(sample_list[0].keys())
+
+    demo = client.post("/api/v1/demo/scan", json={"sample_id": "unsafe_strcpy"})
+    assert demo.status_code == 200
+    payload = demo.json()["data"]
+    assert payload["scan_id"] == "demo-unsafe_strcpy"
+    assert payload["is_demo"] is True
+    assert payload["source_type"] == "demo"
+    assert payload["metadata"]["model_mode"] == "demo"
+    assert payload["metadata"]["inference_used"] is False
+    assert payload["source_code"]
+    assert payload["is_vulnerable"] is True
+    assert payload["findings"]
+
+    missing = client.post("/api/v1/demo/scan", json={"sample_id": "missing-sample"})
+    assert missing.status_code == 404
+    _assert_error_envelope(missing.json(), "DEMO_SAMPLE_NOT_FOUND")
+
+
+@pytest.mark.asyncio
+async def test_guest_scan_uses_findings_metrics_without_inference(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    async def fail_predict(*args, **kwargs):
+        raise AssertionError("guest scan must not call AI inference")
+
+    def fail_model_manager(*args, **kwargs):
+        raise AssertionError("guest scan must not call model manager")
+
+    monkeypatch.setattr(scan_service_module.inference_service, "predict", fail_predict)
+    monkeypatch.setattr(scan_service_module.inference_service, "predict_with_checkpoint", fail_predict)
+    monkeypatch.setattr(scan_service_module.model_manager, "get_active_checkpoint", fail_model_manager)
+    monkeypatch.setattr(scan_service_module.model_manager, "info", fail_model_manager)
+    await _create_user("role-guest@example.com", "Password123", Role.GUEST)
+
+    unauth_code = client.post(
+        "/api/v1/scan/code",
+        json={"source_code": '#include <string.h>\nvoid f(char *s){ char b[8]; strcpy(b, s); }', "language": "c"},
+    )
+    assert unauth_code.status_code == 200
+    payload = unauth_code.json()["data"]
+    assert payload["metadata"]["inference_used"] is False
+    assert payload["metadata"]["model_mode"] == "findings_metrics_only"
+    assert payload["metadata"]["model_name"] is None
+    assert payload["metadata"]["model_version"] is None
+    assert payload["analysis_mode"] == "guest_metrics"
+    assert payload["findings_metrics"]["findings_count"] > 0
+    assert payload["findings"]
+
+    unauth_file = client.post(
+        "/api/v1/scan/file",
+        files={"file": ("sample.c", b"void f(char *s){ char b[8]; strcpy(b, s); }", "text/plain")},
+    )
+    assert unauth_file.status_code == 200
+    assert unauth_file.json()["data"]["metadata"]["inference_used"] is False
+
+    guest_client = _client()
+    guest_client.post("/api/v1/auth/login", json={"email": "role-guest@example.com", "password": "Password123"})
+    guest_code = guest_client.post(
+        "/api/v1/scan/code",
+        json={"source_code": "int main(){return 0;}", "language": "c"},
+    )
+    assert guest_code.status_code == 200
+    assert guest_code.json()["data"]["metadata"]["inference_used"] is False
+
+    guest_model_selection = guest_client.post(
+        "/api/v1/scan/code",
+        json={
+            "source_code": "int main(){return 0;}",
+            "language": "c",
+            "model_mode": "single",
+        },
+    )
+    assert guest_model_selection.status_code == 403
+    _assert_error_envelope(guest_model_selection.json(), "MODEL_SELECTION_REQUIRES_AUTH")
+
+    guest_file_model_selection = guest_client.post(
+        "/api/v1/scan/file",
+        data={"checkpoint_name": "best_graphcodebert_linevul.pt"},
+        files={"file": ("sample.c", b"int main(){return 0;}", "text/plain")},
+    )
+    assert guest_file_model_selection.status_code == 403
+    _assert_error_envelope(guest_file_model_selection.json(), "MODEL_SELECTION_REQUIRES_AUTH")
+
+
+@pytest.mark.asyncio
+async def test_user_admin_scan_uses_ai_and_metrics(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(scan_service_module.inference_service, "predict", _fake_predict)
+    await _create_user("real-scan-user@example.com", "Password123", Role.USER)
+    await _create_user("real-scan-admin@example.com", "Password123", Role.ADMIN)
+
+    user_client = _client()
+    user_client.post("/api/v1/auth/login", json={"email": "real-scan-user@example.com", "password": "Password123"})
+    user_scan = user_client.post(
+        "/api/v1/scan/code",
+        json={"source_code": "int main(){return 0;}", "language": "c"},
+    )
+    assert user_scan.status_code == 200
+    user_payload = user_scan.json()["data"]
+    assert user_payload["metadata"]["inference_used"] is True
+    assert user_payload["metadata"]["analysis_mode"] == "metrics_plus_ai"
+    assert "findings_metrics" in user_payload
+
+    admin_client = _client()
+    admin_client.post("/api/v1/auth/login", json={"email": "real-scan-admin@example.com", "password": "Password123"})
+    admin_scan = admin_client.post(
+        "/api/v1/scan/code",
+        json={"source_code": "int main(){return 0;}", "language": "c"},
+    )
+    assert admin_scan.status_code == 200
+    assert admin_scan.json()["data"]["metadata"]["inference_used"] is True
+
+
+@pytest.mark.asyncio
+async def test_user_request_level_checkpoint_selection_allowed(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(scan_service_module.inference_service, "predict_with_checkpoint", _fake_predict_with_checkpoint)
+    await _create_user("request-model-user@example.com", "Password123", Role.USER)
+    client.post(
+        "/api/v1/auth/login",
+        json={"email": "request-model-user@example.com", "password": "Password123"},
+    )
+
+    response = client.post(
+        "/api/v1/scan/code",
+        json={
+            "source_code": "int main(){return 0;}",
+            "language": "c",
+            "checkpoint_name": "best_graphcodebert_linevul.pt",
+        },
+    )
+    assert response.status_code == 200
+    assert response.json()["data"]["metadata"]["selected_checkpoint"] == "best_graphcodebert_linevul.pt"
+
+
+def test_scan_code_best_confidence_selects_highest_confidence_and_persists_metadata(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(scan_service_module.inference_service, "predict_with_checkpoint", _fake_predict_with_checkpoint)
+    import asyncio
+
+    asyncio.run(_create_user("ensemble-owner@example.com", "Password123", Role.USER))
+    client.post("/api/v1/auth/login", json={"email": "ensemble-owner@example.com", "password": "Password123"})
+
+    response = client.post(
+        "/api/v1/scan/code",
+        json={
+            "source_code": "int main(){return 0;}",
+            "language": "c",
+            "model_mode": "best_confidence",
+            "checkpoint_names": [
+                "best_codebert_linevul.pt",
+                "best_graphcodebert_linevul.pt",
+            ],
+        },
+    )
+    assert response.status_code == 200
+    payload = response.json()["data"]
+    assert payload["metadata"]["model_mode"] == "best_confidence"
+    assert payload["metadata"]["selected_checkpoint"] == "best_graphcodebert_linevul.pt"
+    assert len(payload["metadata"]["candidate_results"]) == 2
+
+    detail = client.get(f"/api/v1/scan/{payload['scan_id']}")
+    assert detail.status_code == 200
+    assert detail.json()["data"]["metadata"]["selected_checkpoint"] == "best_graphcodebert_linevul.pt"
+
+
+def test_scan_code_best_confidence_tie_breaks_by_severity(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    async def same_confidence(source_code: str, language: str, checkpoint_name: str) -> InferenceOutput:
+        return InferenceOutput(
+            is_vulnerable=True,
+            confidence=0.9,
+            vulnerability_probability=0.9,
+        )
+
+    risk_levels = iter(["MEDIUM", "HIGH"])
+    monkeypatch.setattr(scan_service_module.inference_service, "predict_with_checkpoint", same_confidence)
+    monkeypatch.setattr(scan_service_module, "classify_risk_level", lambda risk_score, findings: next(risk_levels))
+    import asyncio
+
+    asyncio.run(_create_user("tie-break-user@example.com", "Password123", Role.USER))
+    client.post("/api/v1/auth/login", json={"email": "tie-break-user@example.com", "password": "Password123"})
+
+    response = client.post(
+        "/api/v1/scan/code",
+        json={
+            "source_code": "int main(){return 0;}",
+            "language": "c",
+            "model_mode": "best_confidence",
+            "checkpoint_names": [
+                "best_codebert_linevul.pt",
+                "best_graphcodebert_linevul.pt",
+            ],
+        },
+    )
+    assert response.status_code == 200
+    assert response.json()["data"]["metadata"]["selected_checkpoint"] == "best_graphcodebert_linevul.pt"
+
+
+def test_scan_code_explicit_checkpoint_errors_are_enveloped(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    async def missing_checkpoint(source_code: str, language: str, checkpoint_name: str) -> InferenceOutput:
+        from app.core.exceptions import NotFoundException
+
+        raise NotFoundException(message="Checkpoint not found", error_code="CHECKPOINT_NOT_FOUND")
+
+    monkeypatch.setattr(scan_service_module.inference_service, "predict_with_checkpoint", missing_checkpoint)
+    import asyncio
+
+    asyncio.run(_create_user("checkpoint-error-user@example.com", "Password123", Role.USER))
+    client.post(
+        "/api/v1/auth/login",
+        json={"email": "checkpoint-error-user@example.com", "password": "Password123"},
+    )
+    missing = client.post(
+        "/api/v1/scan/code",
+        json={
+            "source_code": "int main(){return 0;}",
+            "language": "c",
+            "checkpoint_name": "missing.pt",
+        },
+    )
+    assert missing.status_code == 404
+    _assert_error_envelope(missing.json(), "CHECKPOINT_NOT_FOUND")
 
 
 @pytest.mark.asyncio
@@ -404,3 +784,102 @@ async def test_admin_bootstrap_works_in_in_memory_mode(monkeypatch: pytest.Monke
     admin = await repo.get_user_by_email("bootstrap-admin@example.com")
     assert admin is not None
     assert admin.role == Role.ADMIN
+
+
+@pytest.mark.asyncio
+async def test_admin_csv_export_permissions_and_content(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    vulnerability_results = iter([False, True])
+
+    async def _predict_with_label(source_code: str, language: str) -> InferenceOutput:
+        is_vulnerable = next(vulnerability_results)
+        return InferenceOutput(
+            is_vulnerable=is_vulnerable,
+            confidence=0.88 if is_vulnerable else 0.91,
+            vulnerability_probability=0.88 if is_vulnerable else 0.09,
+        )
+
+    monkeypatch.setattr(scan_service_module.inference_service, "predict", _predict_with_label)
+    await _create_user("csv-user@example.com", "Password123", Role.USER)
+    await _create_user("csv-admin@example.com", "Password123", Role.ADMIN)
+
+    guest = client.get("/api/v1/admin/scan-sources/export.csv")
+    assert guest.status_code == 401
+    _assert_error_envelope(guest.json(), "UNAUTHORIZED")
+
+    safe_source_code = 'int main(){\n  printf("hello, csv");\n  return 0;\n}'
+    vulnerable_source_code = 'char buf[4];\nstrcpy(buf, "too long, quoted");\n'
+    user_client = _client()
+    user_client.post("/api/v1/auth/login", json={"email": "csv-user@example.com", "password": "Password123"})
+    safe_scan = user_client.post(
+        "/api/v1/scan/code",
+        json={"source_code": safe_source_code, "language": "c"},
+    )
+    assert safe_scan.status_code == 200
+    vulnerable_scan = user_client.post(
+        "/api/v1/scan/code",
+        json={"source_code": vulnerable_source_code, "language": "c"},
+    )
+    assert vulnerable_scan.status_code == 200
+
+    denied = user_client.get("/api/v1/admin/scan-sources/export.csv")
+    assert denied.status_code == 403
+    _assert_error_envelope(denied.json(), "FORBIDDEN")
+
+    admin_client = _client()
+    admin_client.post("/api/v1/auth/login", json={"email": "csv-admin@example.com", "password": "Password123"})
+    exported = admin_client.get("/api/v1/admin/scan-sources/export.csv")
+    assert exported.status_code == 200
+    assert "text/csv" in exported.headers["content-type"]
+    assert "scan_sources_export_" in exported.headers["content-disposition"]
+
+    reader = csv.DictReader(io.StringIO(exported.text))
+    rows = list(reader)
+    assert reader.fieldnames == [
+        "scan_id",
+        "user_id",
+        "user_email",
+        "created_at",
+        "filename",
+        "language",
+        "risk_level",
+        "vulnerable",
+        "confidence",
+        "model_mode",
+        "selected_checkpoint",
+        "source_code",
+    ]
+    rows_by_source = {row["source_code"]: row for row in rows}
+    assert safe_source_code in rows_by_source
+    assert vulnerable_source_code in rows_by_source
+    assert rows_by_source[safe_source_code]["user_email"] == "csv-user@example.com"
+    assert rows_by_source[safe_source_code]["vulnerable"] == "0"
+    assert rows_by_source[vulnerable_source_code]["vulnerable"] == "1"
+    assert rows_by_source[safe_source_code]["source_code"] == safe_source_code
+    assert rows_by_source[vulnerable_source_code]["source_code"] == vulnerable_source_code
+    assert "password_hash" not in exported.text
+    assert "Password123" not in exported.text
+
+
+@pytest.mark.asyncio
+async def test_admin_user_management_delete_guards(client: TestClient) -> None:
+    admin = await _create_user("delete-admin@example.com", "Password123", Role.ADMIN)
+    normal_user = await _create_user("delete-user@example.com", "Password123", Role.USER)
+    await _create_user("delete-actor@example.com", "Password123", Role.USER)
+
+    user_client = _client()
+    user_client.post("/api/v1/auth/login", json={"email": "delete-actor@example.com", "password": "Password123"})
+    user_denied = user_client.delete(f"/api/v1/admin/users/{normal_user.id}")
+    assert user_denied.status_code == 403
+    _assert_error_envelope(user_denied.json(), "FORBIDDEN")
+
+    admin_client = _client()
+    admin_client.post("/api/v1/auth/login", json={"email": "delete-admin@example.com", "password": "Password123"})
+    self_delete = admin_client.delete(f"/api/v1/admin/users/{admin.id}")
+    assert self_delete.status_code == 400
+    _assert_error_envelope(self_delete.json(), "CANNOT_DELETE_SELF")
+
+    deleted = admin_client.delete(f"/api/v1/admin/users/{normal_user.id}")
+    assert deleted.status_code == 200

@@ -6,7 +6,7 @@ interface StatCardProps {
 
 export function StatCard({ title, value, description }: StatCardProps): JSX.Element {
   return (
-    <article className="rounded-lg border border-border bg-white p-4 shadow-sm">
+    <article className="rounded-lg border border-border bg-surface-panel p-4 shadow-sm">
       <span className="text-[10px] font-semibold text-text-muted uppercase tracking-wider block">
         {title}
       </span>

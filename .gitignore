@@ -71,3 +71,7 @@ Desktop.ini
 # App/Agent temp files
 .gemini/
 artifacts/
+
+docs/
+
+.agents/

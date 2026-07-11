@@ -24,11 +24,11 @@ export function FindingRow({ finding, isSelected, onSelect }: FindingRowProps): 
         type="button"
         onClick={onSelect}
         className={cn(
-          "w-full rounded-[6px] border border-border bg-white text-left transition-all duration-150 relative",
+          "w-full rounded-[6px] border border-border bg-surface-elevated text-left transition-all duration-150 relative",
           "border-l-[3px]",
           isSelected 
             ? "bg-severityBg-low border-l-primary border-primary/40 shadow-sm" 
-            : cn(leftBorderColor, "hover:bg-gray-50/80"),
+            : cn(leftBorderColor, "hover:bg-surface-subtle"),
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20",
           "p-3"
         )}
@@ -47,11 +47,11 @@ export function FindingRow({ finding, isSelected, onSelect }: FindingRowProps): 
         </p>
 
         <div className="mt-2.5 flex items-center justify-between gap-2 text-[11px] text-text-muted">
-          <span className="font-mono bg-gray-100/70 px-1.5 py-0.5 rounded text-[10px]">
+          <span className="font-mono bg-surface-panel px-1.5 py-0.5 rounded text-[10px]">
             L{finding.line}
           </span>
           {finding.code && (
-            <code className="max-w-[70%] truncate font-mono bg-gray-100/70 px-1.5 py-0.5 rounded text-[10px] text-text-secondary border border-border/30">
+            <code className="max-w-[70%] truncate font-mono bg-surface-panel px-1.5 py-0.5 rounded text-[10px] text-text-secondary border border-border/30">
               {finding.code.trim()}
             </code>
           )}

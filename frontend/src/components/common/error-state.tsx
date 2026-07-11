@@ -15,7 +15,7 @@ export function ErrorState({
 }: ErrorStateProps): JSX.Element {
   return (
     <section
-      className="w-full rounded-lg border border-severity-critical/25 bg-severityBg-critical p-5 shadow-sm"
+      className="w-full rounded-lg border border-severity-critical/30 bg-severityBg-critical p-5 shadow-sm"
       role="alert"
       aria-live="assertive"
     >

@@ -26,10 +26,10 @@ export function PaginationControls({
   for (let i = start; i <= end; i++) pageNumbers.push(i);
 
   const btnBase =
-    "inline-flex h-7 min-w-[28px] items-center justify-center rounded-[5px] border border-gray-200 bg-white px-2 text-[11px] font-medium text-text-secondary transition-colors hover:bg-gray-50 hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-40";
+    "inline-flex h-7 min-w-[28px] items-center justify-center rounded-[5px] border border-border bg-surface-elevated px-2 text-[11px] font-medium text-text-secondary transition-colors hover:bg-surface-subtle hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-40";
 
   const btnActive =
-    "inline-flex h-7 min-w-[28px] items-center justify-center rounded-[5px] border border-primary bg-primary px-2 text-[11px] font-medium text-white";
+    "inline-flex h-7 min-w-[28px] items-center justify-center rounded-[5px] border border-primary bg-primary px-2 text-[11px] font-medium text-primary-foreground";
 
   return (
     <nav
@@ -51,7 +51,7 @@ export function PaginationControls({
           className={btnBase}
           aria-label="Go to previous page"
         >
-          ‹
+          Prev
         </button>
 
         {/* First page shortcut */}
@@ -66,7 +66,7 @@ export function PaginationControls({
               1
             </button>
             {start > 2 && (
-              <span className="px-1 text-[11px] text-text-muted">…</span>
+              <span className="px-1 text-[11px] text-text-muted">...</span>
             )}
           </>
         )}
@@ -89,7 +89,7 @@ export function PaginationControls({
         {end < totalPages && (
           <>
             {end < totalPages - 1 && (
-              <span className="px-1 text-[11px] text-text-muted">…</span>
+              <span className="px-1 text-[11px] text-text-muted">...</span>
             )}
             <button
               type="button"
@@ -110,7 +110,7 @@ export function PaginationControls({
           className={btnBase}
           aria-label="Go to next page"
         >
-          ›
+          Next
         </button>
       </div>
     </nav>

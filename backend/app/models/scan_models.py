@@ -40,10 +40,16 @@ class AnalysisResult(BaseModel):
 
 
 class MetadataInfo(BaseModel):
-    model_name: str = Field(..., min_length=1, max_length=128)
-    model_version: str = Field(..., min_length=1, max_length=128)
-    threshold: float = Field(..., ge=0.0, le=1.0)
+    model_name: str | None = Field(default=None, max_length=128)
+    model_version: str | None = Field(default=None, max_length=128)
+    threshold: float | None = Field(default=None, ge=0.0, le=1.0)
     checkpoint: str | None = Field(default=None, max_length=256)
+    model_mode: str | None = Field(default=None, max_length=64)
+    selected_checkpoint: str | None = Field(default=None, max_length=256)
+    inference_used: bool = True
+    analysis_mode: str | None = Field(default=None, max_length=64)
+    findings_metrics: dict[str, Any] | None = None
+    candidate_results: list[dict[str, Any]] = Field(default_factory=list)
 
     model_config = ConfigDict(extra="forbid", protected_namespaces=())
 
@@ -158,3 +164,4 @@ class ScanResultResponse(BaseModel):
     confidence: float
     risk_level: str
     findings: list[dict[str, Any]]
+    metadata: dict[str, Any] | None = None

@@ -7,13 +7,13 @@ interface LoadingStateProps {
 }
 
 export function LoadingState({
-  title = "Loading…",
+  title = "Loading...",
   description = "Please wait while data is being prepared.",
   actionSlot,
 }: LoadingStateProps): JSX.Element {
   return (
     <section
-      className="w-full rounded-lg border border-border bg-white p-5 shadow-sm"
+      className="w-full rounded-lg border border-border bg-surface-panel p-5 shadow-sm"
       aria-live="polite"
       aria-busy="true"
       aria-label={title}
@@ -47,9 +47,9 @@ export function LoadingState({
 
           {/* Shimmer skeleton rows */}
           <div className="mt-4 space-y-2" aria-hidden="true">
-            <div className="h-2.5 w-2/3 rounded animate-pulse bg-gray-100" />
-            <div className="h-2.5 w-1/2 rounded animate-pulse bg-gray-100" />
-            <div className="h-2.5 w-5/6 rounded animate-pulse bg-gray-100" />
+            <div className="h-2.5 w-2/3 rounded animate-pulse bg-surface-elevated" />
+            <div className="h-2.5 w-1/2 rounded animate-pulse bg-surface-elevated" />
+            <div className="h-2.5 w-5/6 rounded animate-pulse bg-surface-elevated" />
           </div>
         </div>
 

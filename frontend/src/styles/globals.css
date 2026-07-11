@@ -3,53 +3,53 @@
 @tailwind utilities;
 
 :root {
-  --background: 220 20% 97%;
+  --background: 210 40% 98%;
   --foreground: 222 47% 11%;
   --card: 0 0% 100%;
   --card-foreground: 222 47% 11%;
   --popover: 0 0% 100%;
   --popover-foreground: 222 47% 11%;
 
-  --primary: 217 91% 60%;
-  --primary-foreground: 210 40% 98%;
-  --primary-hover: 221 83% 53%;
+  --primary: 221 83% 53%;
+  --primary-foreground: 0 0% 100%;
+  --primary-hover: 217 91% 45%;
   --primary-subtle: 214 100% 97%;
 
-  --secondary: 210 20% 96%;
+  --secondary: 210 40% 96%;
   --secondary-foreground: 215 25% 27%;
-  --muted: 210 20% 96%;
+  --muted: 210 40% 96%;
   --muted-foreground: 215 16% 47%;
 
-  --accent: 210 20% 96%;
-  --accent-foreground: 222 47% 11%;
+  --accent: 199 89% 48%;
+  --accent-foreground: 0 0% 100%;
 
   --destructive: 0 72% 51%;
-  --destructive-foreground: 210 40% 98%;
+  --destructive-foreground: 0 0% 100%;
 
-  --border: 214 20% 90%;
-  --border-strong: 215 16% 82%;
-  --input: 214 20% 86%;
-  --ring: 217 91% 60%;
+  --border: 220 13% 91%;
+  --border-strong: 215 20% 78%;
+  --input: 215 20% 78%;
+  --ring: 221 83% 53%;
 
-  --surface-page: 220 20% 97%;
+  --surface-page: 210 40% 98%;
   --surface-panel: 0 0% 100%;
   --surface-elevated: 0 0% 100%;
-  --surface-subtle: 210 20% 96%;
+  --surface-subtle: 210 40% 96%;
 
   --text-primary: 222 47% 11%;
   --text-secondary: 215 25% 27%;
   --text-muted: 215 16% 47%;
-  --text-placeholder: 217 10% 72%;
+  --text-placeholder: 215 20% 65%;
 
-  --severity-critical: 0 74% 52%;
+  --severity-critical: 0 74% 42%;
   --severity-critical-bg: 0 86% 97%;
-  --severity-high: 24 95% 45%;
-  --severity-high-bg: 34 100% 96%;
-  --severity-medium: 38 92% 42%;
-  --severity-medium-bg: 48 100% 95%;
-  --severity-low: 217 91% 60%;
+  --severity-high: 14 86% 45%;
+  --severity-high-bg: 24 100% 96%;
+  --severity-medium: 36 92% 40%;
+  --severity-medium-bg: 48 100% 96%;
+  --severity-low: 217 91% 45%;
   --severity-low-bg: 214 100% 97%;
-  --severity-safe: 142 72% 35%;
+  --severity-safe: 142 76% 36%;
   --severity-safe-bg: 138 76% 97%;
 
   --radius: 0.5rem;
@@ -71,6 +71,7 @@ body {
 body {
   @apply bg-background text-foreground antialiased;
   font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  background: hsl(var(--surface-page));
 }
 
 /* Text selection */
@@ -118,9 +119,9 @@ body {
   .animate-shimmer {
     background: linear-gradient(
       90deg,
-      #f3f4f6 0%,
-      #e9eaec 40%,
-      #f3f4f6 80%
+      #f1f5f9 0%,
+      #e2e8f0 40%,
+      #f1f5f9 80%
     );
     background-size: 200% 100%;
     animation: shimmer 1.6s ease-in-out infinite;
@@ -162,7 +163,7 @@ body {
 /* Thin custom scrollbar for findings panels */
 .scrollbar-thin {
   scrollbar-width: thin;
-  scrollbar-color: hsl(var(--border-strong)) transparent;
+  scrollbar-color: hsl(var(--border-strong)) hsl(var(--surface-panel));
 }
 
 .scrollbar-thin::-webkit-scrollbar {

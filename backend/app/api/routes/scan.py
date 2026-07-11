@@ -1,10 +1,11 @@
 import os
 import logging
+import json
 
 from fastapi import APIRouter, Depends, File, Form, Query, Request, UploadFile
 
 from app.api.dependencies import ScanRepositoryDep, AuditRepositoryDep
-from app.core.exceptions import BadRequestException, NotFoundException
+from app.core.exceptions import BadRequestException, ForbiddenException, NotFoundException
 from app.core.limiter import limiter, get_rate_limit, get_scan_rate_limit_key
 from app.core.response import success_response
 from app.core.auth_dependencies import CurrentUserDep, OptionalUserDep, require_role
@@ -27,6 +28,54 @@ _BLOCKED_EXTENSIONS: frozenset[str] = frozenset({
 
 def get_scan_service(repository: ScanRepositoryDep) -> ScanService:
     return ScanService(repository=repository)
+
+
+def _parse_checkpoint_names(raw_value: str | None) -> list[str] | None:
+    if raw_value is None or not raw_value.strip():
+        return None
+    try:
+        parsed = json.loads(raw_value)
+        if isinstance(parsed, list):
+            return [str(item) for item in parsed if str(item).strip()]
+    except json.JSONDecodeError:
+        pass
+    return [item.strip() for item in raw_value.split(",") if item.strip()]
+
+
+def _role_value(current_user) -> str | None:
+    if current_user is None:
+        return None
+    return current_user.role.value if isinstance(current_user.role, Role) else str(current_user.role)
+
+
+def _is_guest_scan(current_user) -> bool:
+    return current_user is None or _role_value(current_user) == Role.GUEST.value
+
+
+def _has_model_selection_fields(
+    *,
+    model_mode: str | None = None,
+    checkpoint_name: str | None = None,
+    checkpoint_names: list[str] | str | None = None,
+    selected_checkpoint: str | None = None,
+) -> bool:
+    if model_mode and model_mode.strip():
+        return True
+    if checkpoint_name and checkpoint_name.strip():
+        return True
+    if selected_checkpoint and selected_checkpoint.strip():
+        return True
+    if isinstance(checkpoint_names, str):
+        return bool(checkpoint_names.strip())
+    return bool(checkpoint_names)
+
+
+def _ensure_guest_did_not_select_model(current_user, **fields) -> None:
+    if _is_guest_scan(current_user) and _has_model_selection_fields(**fields):
+        raise ForbiddenException(
+            message="Khách truy cập không được lựa chọn mô hình AI.",
+            error_code="MODEL_SELECTION_REQUIRES_AUTH",
+        )
 
 
 async def _log_file_rejection(
@@ -91,13 +140,26 @@ def _validate_upload_filename(filename: str) -> None:
 async def scan_code(
     request: Request,
     payload: ScanCodeRequest,
+    current_user: OptionalUserDep,
     service: ScanService = Depends(get_scan_service),
-    current_user: OptionalUserDep = None,
 ):
+    _ensure_guest_did_not_select_model(
+        current_user,
+        model_mode=payload.model_mode,
+        checkpoint_name=payload.checkpoint_name,
+        checkpoint_names=payload.checkpoint_names,
+        selected_checkpoint=payload.selected_checkpoint,
+    )
+    is_guest = _is_guest_scan(current_user)
+    selected_checkpoint = payload.checkpoint_name or payload.selected_checkpoint
     data = await service.scan_code(
         source_code=payload.source_code,
         language=payload.language,
-        user_id=current_user.id if current_user else None,
+        user_id=None if is_guest else current_user.id,
+        model_mode=payload.model_mode,
+        checkpoint_name=selected_checkpoint,
+        checkpoint_names=payload.checkpoint_names,
+        use_ai=not is_guest,
     )
     return success_response(data=data, message="Analysis completed")
 
@@ -106,15 +168,29 @@ async def scan_code(
 @limiter.limit(get_rate_limit, key_func=get_scan_rate_limit_key)
 async def scan_file(
     request: Request,
+    current_user: OptionalUserDep,
     file: UploadFile = File(...),
     language: str | None = Form(default=None),
+    model_mode: str | None = Form(default=None),
+    checkpoint_name: str | None = Form(default=None),
+    checkpoint_names: str | None = Form(default=None),
+    selected_checkpoint: str | None = Form(default=None),
     service: ScanService = Depends(get_scan_service),
     audit_repo: AuditRepositoryDep = None,
-    current_user: OptionalUserDep = None,
 ):
+    _ensure_guest_did_not_select_model(
+        current_user,
+        model_mode=model_mode,
+        checkpoint_name=checkpoint_name,
+        checkpoint_names=checkpoint_names,
+        selected_checkpoint=selected_checkpoint,
+    )
+    is_guest = _is_guest_scan(current_user)
     ip = request.client.host if request.client else None
-    uid = current_user.id if current_user else None
+    uid = None if is_guest else current_user.id
     filename = file.filename or "uploaded_file"
+    parsed_checkpoint_names = _parse_checkpoint_names(checkpoint_names)
+    resolved_checkpoint_name = checkpoint_name or selected_checkpoint
 
     # --- filename security checks ---
     try:
@@ -140,6 +216,10 @@ async def scan_file(
         content_bytes=content,
         language_hint=language,
         user_id=uid,
+        model_mode=model_mode,
+        checkpoint_name=resolved_checkpoint_name,
+        checkpoint_names=parsed_checkpoint_names,
+        use_ai=not is_guest,
     )
     return success_response(data=data, message="Analysis completed")
 

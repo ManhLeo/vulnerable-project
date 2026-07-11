@@ -3,12 +3,13 @@
 import { Badge } from "@/components/ui/badge";
 
 const LANGUAGE_OPTIONS = [
-  { value: "c_cpp", label: "C/C++" },
+  { value: "c", label: "C" },
+  { value: "cpp", label: "C++" },
 ] as const;
 
 interface LanguageSelectorProps {
-  value: string;
-  onChange: (value: string) => void;
+  value: "c" | "cpp";
+  onChange: (value: "c" | "cpp") => void;
   disabled?: boolean;
 }
 
@@ -31,8 +32,8 @@ export function LanguageSelector({
         id="language"
         value={value}
         disabled={disabled}
-        onChange={(event) => onChange(event.target.value)}
-        className="h-9 w-full rounded-md border border-border bg-surface-panel px-3 text-sm outline-none ring-offset-background transition placeholder:text-text-muted focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-60"
+        onChange={(event) => onChange(event.target.value as "c" | "cpp")}
+        className="h-10 w-full rounded-md border border-border bg-surface-elevated px-3 text-sm text-text-primary outline-none transition placeholder:text-text-muted focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-60"
       >
         {LANGUAGE_OPTIONS.map((option) => (
           <option key={option.value} value={option.value}>

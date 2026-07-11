@@ -48,7 +48,7 @@ export function FindingsPanel({
 
   if (findings.length === 0) {
     return (
-      <section className="rounded-lg border border-border bg-white p-4 shadow-sm">
+      <section className="rounded-lg border border-border bg-surface-panel p-4 shadow-sm">
         <h3 className="text-xs font-semibold uppercase tracking-wider text-text-secondary">Findings</h3>
         {isVulnerable ? (
           <p className="mt-3 rounded-[6px] border border-severity-high/20 bg-severityBg-high p-3 text-xs text-severity-high/90 leading-relaxed font-medium">
@@ -64,11 +64,11 @@ export function FindingsPanel({
   }
 
   return (
-    <section className="rounded-lg border border-border bg-white p-4 shadow-sm">
+    <section className="rounded-lg border border-border bg-surface-panel p-4 shadow-sm">
       <div className="flex items-center justify-between border-b border-border/60 pb-3">
         <h3 className="text-xs font-semibold uppercase tracking-wider text-text-secondary">Findings List</h3>
         <span className="text-[10px] font-mono font-medium text-text-muted">
-          Use ↑ ↓ to navigate findings
+          Use keyboard arrows to navigate findings
         </span>
       </div>
       <ul className="mt-3 space-y-2 max-h-[420px] overflow-y-auto pr-1 scrollbar-thin">

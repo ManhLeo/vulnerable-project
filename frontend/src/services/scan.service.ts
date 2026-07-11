@@ -18,9 +18,35 @@ export async function scanCode(
   return response.data;
 }
 
-export async function scanFile(file: File): Promise<ApiSuccessResponse<ScanCodeResultDto>> {
+interface ScanFilePayload {
+  file: File;
+  language?: "c" | "cpp";
+  model_mode?: "single" | "best_confidence";
+  checkpoint_name?: string;
+  checkpoint_names?: string[];
+}
+
+export async function scanFile({
+  file,
+  language,
+  model_mode,
+  checkpoint_name,
+  checkpoint_names,
+}: ScanFilePayload): Promise<ApiSuccessResponse<ScanCodeResultDto>> {
   const formData = new FormData();
   formData.append("file", file);
+  if (language) {
+    formData.append("language", language);
+  }
+  if (model_mode) {
+    formData.append("model_mode", model_mode);
+  }
+  if (checkpoint_name) {
+    formData.append("checkpoint_name", checkpoint_name);
+  }
+  if (checkpoint_names && checkpoint_names.length > 0) {
+    formData.append("checkpoint_names", JSON.stringify(checkpoint_names));
+  }
 
   const response = await apiClient.post<ApiSuccessResponse<ScanCodeResultDto>>(
     "/api/v1/scan/file",

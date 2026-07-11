@@ -34,5 +34,6 @@ export function useScanCodeMutation() {
     isError: mutation.isError,
     mutate: mutation.mutate,
     mutateAsync: mutation.mutateAsync,
+    reset: mutation.reset,
   };
 }

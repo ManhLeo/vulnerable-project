@@ -18,7 +18,7 @@ export function HistoryFilters({
   onVulnerableChange,
 }: HistoryFiltersProps): JSX.Element {
   const inputBase =
-    "h-9 rounded-[6px] border border-gray-300 bg-white px-3 text-xs text-text-primary placeholder:text-text-muted outline-none transition-shadow focus:border-primary focus:ring-2 focus:ring-primary/10";
+    "h-9 rounded-[6px] border border-border bg-surface-elevated px-3 text-xs text-text-primary placeholder:text-text-muted outline-none transition-shadow focus:border-primary focus:ring-2 focus:ring-primary/20";
 
   return (
     <div
@@ -43,7 +43,7 @@ export function HistoryFilters({
           type="search"
           value={search}
           onChange={(event) => onSearchChange(event.target.value)}
-          placeholder="Search filename or language…"
+          placeholder="Search filename or language..."
           aria-label="Search scan history"
           className={`${inputBase} pl-8 w-full`}
         />
@@ -88,7 +88,7 @@ export function HistoryFilters({
             onRiskChange("ALL");
             onVulnerableChange("ALL");
           }}
-          className="h-9 rounded-[6px] border border-gray-300 bg-white px-3 text-xs font-medium text-text-secondary hover:bg-gray-50 hover:text-text-primary transition-colors"
+          className="h-9 rounded-[6px] border border-border bg-surface-elevated px-3 text-xs font-medium text-text-secondary hover:bg-surface-subtle hover:text-text-primary transition-colors"
           aria-label="Clear all filters"
         >
           Clear

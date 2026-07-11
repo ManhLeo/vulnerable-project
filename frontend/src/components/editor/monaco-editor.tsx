@@ -55,17 +55,48 @@ export function MonacoEditor({
   const monacoRef = useRef<any>(null);
   const decorationIdsRef = useRef<string[]>([]);
 
+  const handleBeforeMount = useCallback((monaco: any) => {
+    monaco.editor.defineTheme("vulnerable-scanner-light", {
+      base: "vs",
+      inherit: true,
+      rules: [
+        { token: "", foreground: "111827", background: "FFFFFF" },
+        { token: "comment", foreground: "64748B" },
+        { token: "string", foreground: "047857" },
+        { token: "keyword", foreground: "2563EB" },
+        { token: "number", foreground: "B45309" },
+      ],
+      colors: {
+        "editor.background": "#FFFFFF",
+        "editor.foreground": "#111827",
+        "editorLineNumber.foreground": "#94A3B8",
+        "editorLineNumber.activeForeground": "#334155",
+        "editor.selectionBackground": "#2563EB24",
+        "editor.inactiveSelectionBackground": "#2563EB14",
+        "editor.lineHighlightBackground": "#F8FAFC",
+        "editorLineHighlightBackground": "#F8FAFC",
+        "editorCursor.foreground": "#2563EB",
+        "editorIndentGuide.background1": "#E5E7EB",
+        "editorIndentGuide.activeBackground1": "#CBD5E1",
+      },
+    });
+  }, []);
+
   const editorOptions = useMemo(
     () => ({
       minimap: { enabled: false },
-      fontSize: 13,
+      fontSize: 14,
       lineNumbers: "on" as const,
       scrollBeyondLastLine: false,
       automaticLayout: true,
       readOnly: readonly,
       glyphMargin: true,
-      fontFamily: "var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, monospace",
-      lineHeight: 21,
+      roundedSelection: true,
+      renderLineHighlight: "all" as const,
+      wordWrap: "on" as const,
+      tabSize: 2,
+      fontFamily: "JetBrains Mono, Geist Mono, Consolas, monospace",
+      lineHeight: 22,
       padding: { top: 10, bottom: 10 },
       smoothScrolling: true,
     }),
@@ -134,20 +165,20 @@ export function MonacoEditor({
     <div className="w-full overflow-hidden rounded-md border border-border bg-surface-panel transition-colors focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/15">
       <style jsx global>{`
         .finding-line-critical {
-          background: rgba(220, 38, 38, 0.04) !important;
+          background: rgba(239, 68, 68, 0.16) !important;
         }
         .finding-line-high {
-          background: rgba(234, 88, 12, 0.04) !important;
+          background: rgba(239, 68, 68, 0.12) !important;
         }
         .finding-line-medium {
-          background: rgba(217, 119, 6, 0.04) !important;
+          background: rgba(56, 189, 248, 0.1) !important;
         }
         .finding-line-low {
-          background: rgba(37, 99, 235, 0.04) !important;
+          background: rgba(56, 189, 248, 0.08) !important;
         }
         .finding-line-selected {
-          background: rgba(250, 204, 21, 0.15) !important;
-          box-shadow: inset 3px 0 0 0 #2563eb !important;
+          background: rgba(56, 189, 248, 0.18) !important;
+          box-shadow: inset 3px 0 0 0 #38bdf8 !important;
         }
         .finding-glyph-critical {
           background: #dc2626;
@@ -185,7 +216,8 @@ export function MonacoEditor({
 
       <MonacoEditorNoSSR
         height={height}
-        theme="vs-light"
+        beforeMount={handleBeforeMount}
+        theme="vulnerable-scanner-light"
         options={editorOptions}
         onMount={handleMount}
         {...props}

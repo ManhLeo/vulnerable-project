@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { apiClient } from "@/lib/api/client";
+import { useScanStore } from "@/lib/store/scan-store";
 import type { ApiSuccessResponse } from "@/types/api";
 
 export interface User {
@@ -40,9 +41,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = async () => {
     try {
       await apiClient.post("/api/v1/auth/logout");
-      setUser(null);
     } catch (error) {
       console.error("Logout failed", error);
+    } finally {
+      setUser(null);
+      useScanStore.getState().resetWorkspace();
     }
   };
 

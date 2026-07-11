@@ -6,17 +6,19 @@ interface ScanStatusPanelProps {
   isScanning: boolean;
   hasTriggeredScan: boolean;
   error: AppApiError | null;
+  usesAiInference?: boolean;
 }
 
 export function ScanStatusPanel({
   isScanning,
   hasTriggeredScan,
   error,
+  usesAiInference = true,
 }: ScanStatusPanelProps): JSX.Element {
   if (isScanning) {
     return (
       <div
-        className="flex items-center gap-3 rounded-lg border border-border bg-white p-4 shadow-sm"
+        className="flex items-center gap-3 rounded-lg border border-border bg-surface-panel p-4 shadow-sm"
         role="status"
         aria-live="polite"
         aria-label="AI scan in progress"
@@ -43,9 +45,13 @@ export function ScanStatusPanel({
           />
         </svg>
         <div className="min-w-0">
-          <p className="text-xs font-semibold text-text-primary">Scanning…</p>
+          <p className="text-xs font-semibold text-text-primary">
+            {usesAiInference ? "Scanning..." : "Running Findings Metrics..."}
+          </p>
           <p className="mt-0.5 text-[11px] text-text-muted">
-            AI model is analyzing code for vulnerabilities.
+            {usesAiInference
+              ? "AI model and Findings Metrics are analyzing code for vulnerabilities."
+              : "Static Findings Metrics are analyzing code without AI inference."}
           </p>
         </div>
       </div>
@@ -55,7 +61,7 @@ export function ScanStatusPanel({
   if (error) {
     return (
       <div
-        className="rounded-lg border border-severity-critical/25 bg-severityBg-critical p-4"
+        className="rounded-lg border border-severity-critical/30 bg-severityBg-critical p-4"
         role="alert"
         aria-live="assertive"
       >
@@ -85,12 +91,16 @@ export function ScanStatusPanel({
   if (!hasTriggeredScan) {
     return (
       <div
-        className="rounded-lg border border-dashed border-border bg-white p-4"
+        className="rounded-lg border border-dashed border-border bg-surface-panel p-4"
         aria-label="Scan status: awaiting input"
       >
         <p className="text-xs font-semibold text-text-primary">Awaiting scan</p>
         <p className="mt-1 text-[11px] text-text-muted leading-relaxed">
-          Paste code or upload a file, then press <span className="font-semibold text-text-secondary">Scan Code</span> to start analysis.
+          {!usesAiInference ? (
+            <>Paste code or upload a file, then press <span className="font-semibold text-text-secondary">Scan Code</span> to run Findings Metrics.</>
+          ) : (
+            <>Paste code or upload a file, then press <span className="font-semibold text-text-secondary">Scan Code</span> to start analysis.</>
+          )}
         </p>
       </div>
     );

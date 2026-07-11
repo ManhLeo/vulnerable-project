@@ -188,6 +188,31 @@ class ScanRepository:
                 error_code="DATABASE_UNAVAILABLE",
             ) from exc
 
+    async def list_all_for_export(self) -> list[dict[str, Any]]:
+        """Return raw scan documents for the admin CSV export."""
+        projection = {
+            "scan_id": 1,
+            "user_id": 1,
+            "created_at": 1,
+            "filename": 1,
+            "language": 1,
+            "code": 1,
+            "source_code": 1,
+            "prediction": 1,
+            "metadata": 1,
+        }
+        try:
+            cursor = self.collection.find({}, projection).sort("created_at", -1)
+            rows: list[dict[str, Any]] = []
+            async for document in cursor:
+                rows.append(document)
+            return rows
+        except PyMongoError as exc:
+            raise InternalServerException(
+                message="Database operation failed",
+                error_code="DATABASE_UNAVAILABLE",
+            ) from exc
+
     async def delete_scan(self, scan_id: str) -> bool:
         validated_id = validate_scan_id(scan_id)
         try:

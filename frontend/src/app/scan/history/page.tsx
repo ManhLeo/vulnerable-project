@@ -6,6 +6,7 @@ export default function ScanHistoryPage(): JSX.Element {
     <ProtectedRoute allowedRoles={["user", "admin"]}>
       <div className="space-y-6">
         <section className="space-y-1">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-primary">Audit Trail</p>
           <h1 className="text-xl font-semibold tracking-tight text-text-primary md:text-2xl">Scan History</h1>
           <p className="text-xs text-text-muted">
             Review prior scans with filters, severity signals, and paginated records.

@@ -1,18 +1,21 @@
 import { create } from "zustand";
 import type { ScanCodeResultDto } from "@/types/api";
 
+type ScanLanguage = "c" | "cpp";
+
 interface ScanStoreState {
   code: string;
-  language: string;
+  language: ScanLanguage;
   latestResult: ScanCodeResultDto | null;
   selectedFindingIndex: number | null;
   hasTriggeredScan: boolean;
   
   setCode: (code: string) => void;
-  setLanguage: (lang: string) => void;
+  setLanguage: (lang: ScanLanguage) => void;
   setLatestResult: (result: ScanCodeResultDto | null) => void;
   setSelectedFindingIndex: (index: number | null) => void;
   setHasTriggeredScan: (triggered: boolean) => void;
+  prepareForNewScan: (keepLanguage?: boolean) => void;
   resetWorkspace: () => void;
 }
 
@@ -34,7 +37,7 @@ int main() {
 
 export const useScanStore = create<ScanStoreState>((set) => ({
   code: DEFAULT_CODE,
-  language: "c_cpp",
+  language: "cpp",
   latestResult: null,
   selectedFindingIndex: null,
   hasTriggeredScan: false,
@@ -44,9 +47,16 @@ export const useScanStore = create<ScanStoreState>((set) => ({
   setLatestResult: (latestResult) => set({ latestResult }),
   setSelectedFindingIndex: (selectedFindingIndex) => set({ selectedFindingIndex }),
   setHasTriggeredScan: (hasTriggeredScan) => set({ hasTriggeredScan }),
+  prepareForNewScan: (keepLanguage = true) => set((state) => ({
+    code: "",
+    language: keepLanguage ? state.language : "c",
+    latestResult: null,
+    selectedFindingIndex: null,
+    hasTriggeredScan: false,
+  })),
   resetWorkspace: () => set({
-    code: DEFAULT_CODE,
-    language: "c_cpp",
+    code: "",
+    language: "c",
     latestResult: null,
     selectedFindingIndex: null,
     hasTriggeredScan: false

@@ -45,27 +45,88 @@ export interface ModelInfoDto {
   supports_gpu: boolean;
   active_checkpoint: string;
   available_checkpoints: string[];
+  available_model_options?: Array<{
+    checkpoint_name: string;
+    label: string;
+    description: string;
+    loaded?: boolean;
+  }>;
+  supported_modes?: Array<"single" | "best_confidence">;
 }
 
 export interface FindingDto {
-  pattern: string;
-  issue: string;
-  severity: SeverityLevel;
-  line: number;
-  code: string;
+  pattern?: string;
+  issue?: string;
+  severity?: SeverityLevel;
+  line?: number | null;
+  code?: string | null;
+  title?: string | null;
+  name?: string | null;
+  cwe?: string | null;
+  confidence?: number | null;
+  description?: string | null;
+  recommendation?: string | null;
 }
 
 export interface ScanCodeRequestDto {
-  code: string;
-  language: string;
+  source_code: string;
+  language: "c" | "cpp";
+  model_mode?: "single" | "best_confidence";
+  checkpoint_name?: string;
+  checkpoint_names?: string[];
+}
+
+export interface ScanResultMetadataDto {
+  model_mode?: string;
+  selected_checkpoint?: string | null;
+  checkpoint?: string | null;
+  model_name?: string | null;
+  model_version?: string | null;
+  inference_used?: boolean;
+  analysis_mode?: string;
+  findings_metrics?: FindingsMetricsDto;
+  candidate_results?: Array<{
+    checkpoint_name: string;
+    confidence: number;
+    risk_level?: string;
+    is_vulnerable?: boolean;
+  }>;
+}
+
+export interface FindingsMetricsDto {
+  is_vulnerable_by_metrics?: boolean;
+  findings_count: number;
+  risk_score: number;
+  risk_level: string;
+  severity_counts: {
+    critical: number;
+    high: number;
+    medium: number;
+    low: number;
+  };
 }
 
 export interface ScanCodeResultDto {
   scan_id: string;
+  is_demo?: boolean;
+  source_type?: string;
+  language?: string;
+  source_code?: string;
   is_vulnerable: boolean;
   confidence: number;
   risk_level: SeverityLevel;
   findings: FindingDto[];
+  findings_metrics?: FindingsMetricsDto;
+  analysis_mode?: string;
+  metadata?: ScanResultMetadataDto | null;
+}
+
+export interface DemoSampleDto {
+  id: string;
+  title: string;
+  language: "c" | "cpp";
+  source_code: string;
+  description: string;
 }
 
 export interface ScanHistoryItemDto {
@@ -97,4 +158,22 @@ export interface ScanStatsDto {
   vulnerable_ratio: number;
   average_confidence: number;
   risk_distribution: Record<SeverityLevel, number>;
+}
+
+export interface AdminUserDto {
+  id: string;
+  email: string;
+  role: "guest" | "user" | "admin";
+  is_active: boolean;
+  is_deleted: boolean;
+  created_at: string;
+  last_login_at: string | null;
+  failed_login_attempts: number;
+}
+
+export interface AdminStatsDto {
+  users: {
+    total_active: number;
+  };
+  scans: ScanStatsDto;
 }

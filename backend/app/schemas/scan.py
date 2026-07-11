@@ -1,11 +1,16 @@
 from __future__ import annotations
 
-from pydantic import BaseModel, Field, model_validator, field_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator, field_validator
 
 
 class ScanCodeRequest(BaseModel):
     source_code: str = Field(..., min_length=1, description="Raw source code to scan")
     language: str = Field(..., description="Programming language, e.g. py, c, cpp, java")
+    model_mode: str | None = Field(default=None, description="single or best_confidence")
+    checkpoint_name: str | None = Field(default=None, description="Optional explicit checkpoint")
+    checkpoint_names: list[str] | None = Field(default=None, description="Optional candidate checkpoints")
+    selected_checkpoint: str | None = Field(default=None, description="Legacy selected checkpoint field")
+    model_config = ConfigDict(protected_namespaces=())
 
     @model_validator(mode="before")
     @classmethod

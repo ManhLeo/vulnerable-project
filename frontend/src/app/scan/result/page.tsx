@@ -9,7 +9,7 @@ import { FindingsCountSummary } from "@/features/scan-workspace/components/findi
 import { FindingsPanel } from "@/features/scan-workspace/components/findings-panel";
 import { RiskSummaryPanel } from "@/features/scan-workspace/components/risk-summary-panel";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, FileSearch } from "lucide-react";
 
 export default function ScanResultPage(): JSX.Element {
   const router = useRouter();
@@ -42,9 +42,10 @@ export default function ScanResultPage(): JSX.Element {
         </section>
 
         <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-border bg-surface-panel p-12 text-center">
+          <FileSearch className="h-10 w-10 text-primary" />
           <h3 className="text-lg font-semibold text-text-primary">No results loaded</h3>
           <p className="mt-2 text-sm text-text-muted max-w-sm">
-            Please run a new vulnerability scan from the workspace or select a historical record from the history page.
+            No scan result available. Run a new scan or open a record from history.
           </p>
           <div className="mt-6 flex gap-3">
             <Button onClick={() => router.push("/")} variant="primary">
@@ -63,7 +64,8 @@ export default function ScanResultPage(): JSX.Element {
     <div className="space-y-6">
       <section className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="space-y-1">
-          <h1 className="text-2xl font-bold tracking-tight text-text-primary">Scan Analysis Report</h1>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-primary">Evidence Review</p>
+          <h1 className="text-2xl font-semibold tracking-tight text-text-primary">Scan Analysis Report</h1>
           <p className="text-sm text-text-muted">
             Code-level security audit for language: <span className="font-semibold text-primary">{language.toUpperCase()}</span>
           </p>

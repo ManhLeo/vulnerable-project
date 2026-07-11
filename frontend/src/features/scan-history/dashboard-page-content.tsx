@@ -37,9 +37,9 @@ export function DashboardPageContent(): JSX.Element {
         {/* Shimmer Stat Cards */}
         <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
           {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="animate-pulse rounded-lg border border-border bg-white p-5 shadow-sm space-y-3">
-              <div className="h-2 w-20 rounded bg-gray-100" />
-              <div className="h-8 w-24 rounded bg-gray-100" />
+            <div key={i} className="animate-pulse rounded-lg border border-border bg-surface-panel p-5 shadow-sm space-y-3">
+              <div className="h-2 w-20 rounded bg-surface-elevated" />
+              <div className="h-8 w-24 rounded bg-surface-elevated" />
             </div>
           ))}
         </section>
@@ -47,26 +47,26 @@ export function DashboardPageContent(): JSX.Element {
         {/* Shimmer Main Grid */}
         <section className="grid grid-cols-1 gap-6 lg:grid-cols-3">
           <div className="lg:col-span-2 space-y-4">
-            <div className="animate-pulse rounded-lg border border-border bg-white shadow-sm overflow-hidden">
-              <div className="h-12 border-b border-border/60 bg-gray-50/50 p-4" />
+            <div className="animate-pulse rounded-lg border border-border bg-surface-panel shadow-sm overflow-hidden">
+              <div className="h-12 border-b border-border/60 bg-surface-elevated p-4" />
               <div className="p-4 space-y-4">
                 {[1, 2, 3, 4, 5].map((i) => (
                   <div key={i} className="flex items-center justify-between">
-                    <div className="h-3 w-40 rounded bg-gray-100" />
-                    <div className="h-3 w-16 rounded bg-gray-100" />
-                    <div className="h-3 w-12 rounded bg-gray-100" />
+                    <div className="h-3 w-40 rounded bg-surface-elevated" />
+                    <div className="h-3 w-16 rounded bg-surface-elevated" />
+                    <div className="h-3 w-12 rounded bg-surface-elevated" />
                   </div>
                 ))}
               </div>
             </div>
           </div>
           <div className="space-y-6">
-            <div className="animate-pulse rounded-lg border border-border bg-white p-5 shadow-sm space-y-4">
-              <div className="h-3 w-28 rounded bg-gray-100" />
-              <div className="h-3 w-full rounded-full bg-gray-100" />
+            <div className="animate-pulse rounded-lg border border-border bg-surface-panel p-5 shadow-sm space-y-4">
+              <div className="h-3 w-28 rounded bg-surface-elevated" />
+              <div className="h-3 w-full rounded-full bg-surface-elevated" />
               <div className="grid grid-cols-4 gap-2">
                 {[1, 2, 3, 4].map((i) => (
-                  <div key={i} className="h-10 rounded bg-gray-100" />
+                  <div key={i} className="h-10 rounded bg-surface-elevated" />
                 ))}
               </div>
             </div>
@@ -87,7 +87,7 @@ export function DashboardPageContent(): JSX.Element {
 
   if (!stats || stats.total_scans === 0) {
     return (
-      <section className="rounded-lg border border-border bg-white p-12 text-center shadow-sm max-w-xl mx-auto mt-8">
+      <section className="rounded-lg border border-border bg-surface-panel p-12 text-center shadow-sm max-w-xl mx-auto mt-8">
         <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary-subtle text-primary border border-primary/10">
           <span className="font-mono font-bold text-lg">AI</span>
         </div>

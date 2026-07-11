@@ -60,7 +60,7 @@ class Settings(BaseSettings):
     log_level: str = Field(default="INFO")
 
     cors_allowed_origins_raw: str = Field(
-        default="http://localhost:3000",
+        default="http://localhost:3000,http://127.0.0.1:3000",
         validation_alias=AliasChoices("CORS_ALLOWED_ORIGINS", "CORS_ALLOWED_ORIGINS_RAW"),
     )
     cors_allow_credentials: bool = Field(default=True)
@@ -81,7 +81,7 @@ class Settings(BaseSettings):
         ]
 
         if not parsed:
-            parsed = ["http://localhost:3000"] if self.app_env != "production" else []
+            parsed = ["http://localhost:3000", "http://127.0.0.1:3000"] if self.app_env != "production" else []
 
         if self.app_env == "production":
             parsed = [origin for origin in parsed if origin != "*"]

@@ -14,31 +14,35 @@ interface ScanHistoryTableProps {
 
 const SKELETON_ROWS = 8;
 
+function toScanLanguage(value: string): "c" | "cpp" {
+  return value === "c" ? "c" : "cpp";
+}
+
 function SkeletonRows(): JSX.Element {
   return (
     <>
       {Array.from({ length: SKELETON_ROWS }).map((_, i) => (
-        <tr key={i} className="border-t border-gray-100 animate-pulse">
+        <tr key={i} className="border-t border-border animate-pulse">
           <td className="px-4 py-3">
-            <div className="h-3 w-36 rounded bg-gray-100" />
+            <div className="h-3 w-36 rounded bg-surface-elevated" />
           </td>
           <td className="px-4 py-3">
-            <div className="h-5 w-12 rounded bg-gray-100" />
+            <div className="h-5 w-12 rounded bg-surface-elevated" />
           </td>
           <td className="px-4 py-3">
-            <div className="h-5 w-16 rounded-full bg-gray-100" />
+            <div className="h-5 w-16 rounded-full bg-surface-elevated" />
           </td>
           <td className="px-4 py-3">
-            <div className="h-5 w-14 rounded-full bg-gray-100" />
+            <div className="h-5 w-14 rounded-full bg-surface-elevated" />
           </td>
           <td className="px-4 py-3">
-            <div className="h-3 w-10 rounded bg-gray-100" />
+            <div className="h-3 w-10 rounded bg-surface-elevated" />
           </td>
           <td className="px-4 py-3">
-            <div className="h-3 w-28 rounded bg-gray-100" />
+            <div className="h-3 w-28 rounded bg-surface-elevated" />
           </td>
           <td className="px-4 py-3 text-right">
-            <div className="ml-auto h-3 w-12 rounded bg-gray-100" />
+            <div className="ml-auto h-3 w-12 rounded bg-surface-elevated" />
           </td>
         </tr>
       ))}
@@ -68,9 +72,10 @@ export function ScanHistoryTable({
           confidence: res.data.confidence,
           risk_level: res.data.risk_level,
           findings: res.data.findings,
+          metadata: res.data.metadata,
         });
         setCode(res.data.source_code);
-        setLanguage(res.data.language);
+        setLanguage(toScanLanguage(res.data.language));
         router.push("/scan/result");
       }
     } catch (err) {
@@ -82,11 +87,11 @@ export function ScanHistoryTable({
   };
 
   const thClass =
-    "sticky top-0 z-10 bg-gray-50 px-4 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-text-muted border-b border-gray-200 whitespace-nowrap";
+    "sticky top-0 z-10 bg-surface-elevated px-4 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-text-muted border-b border-border whitespace-nowrap";
 
   return (
     <section
-      className="rounded-lg border border-border bg-white shadow-sm overflow-hidden"
+      className="rounded-lg border border-border bg-surface-panel shadow-sm overflow-hidden"
       aria-label="Scan history results"
     >
       {detailError ? (
@@ -109,7 +114,7 @@ export function ScanHistoryTable({
               <th scope="col" className={cn(thClass, "text-right")}>Action</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-100">
+          <tbody className="divide-y divide-border">
             {isLoading ? (
               <SkeletonRows />
             ) : items.length === 0 ? (
@@ -119,7 +124,7 @@ export function ScanHistoryTable({
                     className="flex flex-col items-center justify-center py-16 text-center"
                     aria-live="polite"
                   >
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 text-text-muted">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-surface-elevated text-text-muted">
                       <svg
                         viewBox="0 0 24 24"
                         fill="none"
@@ -148,7 +153,7 @@ export function ScanHistoryTable({
                     "cursor-pointer transition-colors group",
                     loadingId === item.id
                       ? "bg-primary/5"
-                      : "hover:bg-gray-50/80",
+                      : "hover:bg-surface-subtle",
                   )}
                   onClick={() => handleRowClick(item.id)}
                   tabIndex={0}
@@ -167,7 +172,7 @@ export function ScanHistoryTable({
 
                   {/* Language tag */}
                   <td className="px-4 py-2.5">
-                    <span className="inline-flex items-center rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-text-secondary">
+                    <span className="inline-flex items-center rounded bg-surface-elevated px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-text-secondary">
                       {item.language}
                     </span>
                   </td>
@@ -215,7 +220,7 @@ export function ScanHistoryTable({
                       tabIndex={-1}
                       aria-hidden="true"
                     >
-                      {loadingId === item.id ? "Loading…" : "View →"}
+                      {loadingId === item.id ? "Loading..." : "View"}
                     </button>
                   </td>
                 </tr>

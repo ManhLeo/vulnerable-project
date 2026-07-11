@@ -16,10 +16,10 @@ export function FindingsCountSummary({ findings }: FindingsCountSummaryProps): J
   };
 
   return (
-    <section className="rounded-lg border border-border bg-white p-4 shadow-sm">
+    <section className="rounded-lg border border-border bg-surface-panel p-4 shadow-sm">
       <div className="flex items-center justify-between border-b border-border/60 pb-3">
         <h3 className="text-xs font-semibold uppercase tracking-wider text-text-secondary">Findings Metrics</h3>
-        <span className="font-mono text-xs font-semibold bg-gray-100 px-2 py-0.5 rounded text-text-secondary">
+        <span className="font-mono text-xs font-semibold bg-surface-elevated px-2 py-0.5 rounded text-text-secondary">
           {findings.length} Total
         </span>
       </div>
@@ -29,7 +29,7 @@ export function FindingsCountSummary({ findings }: FindingsCountSummaryProps): J
           <div
             key={severity}
             className={cn(
-              "flex items-center justify-between rounded-[4px] border border-border bg-white p-2 border-l-[3px]",
+              "flex items-center justify-between rounded-[4px] border border-border bg-surface-elevated p-2 border-l-[3px]",
               severityColors[severity],
             )}
           >

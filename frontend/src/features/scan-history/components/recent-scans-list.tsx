@@ -10,6 +10,10 @@ interface RecentScansListProps {
   items: ScanHistoryItemDto[];
 }
 
+function toScanLanguage(value: string): "c" | "cpp" {
+  return value === "c" ? "c" : "cpp";
+}
+
 export function RecentScansList({ items }: RecentScansListProps): JSX.Element {
   const router = useRouter();
   const { setLatestResult, setCode, setLanguage } = useScanStore();
@@ -29,9 +33,10 @@ export function RecentScansList({ items }: RecentScansListProps): JSX.Element {
           confidence: res.data.confidence,
           risk_level: res.data.risk_level,
           findings: res.data.findings,
+          metadata: res.data.metadata,
         });
         setCode(res.data.source_code);
-        setLanguage(res.data.language);
+        setLanguage(toScanLanguage(res.data.language));
         router.push("/scan/result");
       }
     } catch (err) {
@@ -42,7 +47,7 @@ export function RecentScansList({ items }: RecentScansListProps): JSX.Element {
   };
 
   return (
-    <section className="rounded-lg border border-border bg-white shadow-sm overflow-hidden" aria-label="Recent scans">
+    <section className="rounded-lg border border-border bg-surface-panel shadow-sm overflow-hidden" aria-label="Recent scans">
       <div className="flex items-center justify-between border-b border-border/60 p-4">
         <h2 className="text-xs font-semibold uppercase tracking-wider text-text-secondary">Recent Scans</h2>
         <span className="text-[10px] font-mono text-text-muted">
@@ -65,7 +70,7 @@ export function RecentScansList({ items }: RecentScansListProps): JSX.Element {
       ) : (
         <div className="overflow-x-auto">
           <table className="min-w-full text-xs">
-            <thead className="bg-gray-50 border-b border-border/60">
+            <thead className="bg-surface-elevated border-b border-border/60">
               <tr>
                 <th className="px-4 py-2.5 text-left text-[10px] font-bold text-text-muted uppercase tracking-wider">Filename</th>
                 <th className="px-4 py-2.5 text-left text-[10px] font-bold text-text-muted uppercase tracking-wider">Language</th>
@@ -78,14 +83,14 @@ export function RecentScansList({ items }: RecentScansListProps): JSX.Element {
               {items.map((item) => (
                 <tr
                   key={item.id}
-                  className="hover:bg-gray-50/50 cursor-pointer transition-colors group"
+                  className="hover:bg-surface-subtle cursor-pointer transition-colors group"
                   onClick={() => handleRowClick(item.id)}
                 >
                   <td className="px-4 py-3 font-medium text-text-primary group-hover:text-primary transition-colors max-w-[140px] truncate">
                     {item.filename ?? "Untitled source"}
                   </td>
                   <td className="px-4 py-3">
-                    <span className="inline-flex items-center rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-semibold text-text-secondary tracking-wide uppercase">
+                    <span className="inline-flex items-center rounded bg-surface-elevated px-1.5 py-0.5 text-[10px] font-semibold text-text-secondary tracking-wide uppercase">
                       {item.language}
                     </span>
                   </td>
